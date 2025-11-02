@@ -47,7 +47,8 @@ export const useApi = () => {
     }
 
     const suggestions = {
-        create: (suggestionData) => api.post('/suggestions', suggestionData)
+        create: (suggestionData) => api.post('/suggestions', suggestionData),
+        getByUser: () => api.get('/suggestions/user')
     }
 
     return {

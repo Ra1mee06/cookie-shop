@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +28,7 @@ public class FavoriteController {
     public ResponseEntity<List<FavoriteDTO>> getAllFavorites(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
         // Если userId не передан, возвращаем пустой список (для неавторизованных пользователей)
         if (userId == null) {
-            return ResponseEntity.ok(List.of());
+            return ResponseEntity.ok(Collections.emptyList());
         }
         
         List<FavoriteDTO> favorites = favoriteService.getAllFavoritesByUserId(userId);
@@ -44,8 +46,9 @@ public class FavoriteController {
             if (userId == null) {
                 List<User> users = userRepository.findAll();
                 if (users.isEmpty()) {
-                    return ResponseEntity.status(500)
-                        .body(Map.of("error", "No users found in database. Please create a user first."));
+                    Map<String, String> response = new HashMap<>();
+                    response.put("error", "No users found in database. Please create a user first.");
+                    return ResponseEntity.status(500).body(response);
                 }
                 userId = users.get(0).getId(); // Используем первого доступного пользователя
             } else {
@@ -53,8 +56,9 @@ public class FavoriteController {
                 if (!userRepository.findById(userId).isPresent()) {
                     List<User> users = userRepository.findAll();
                     if (users.isEmpty()) {
-                        return ResponseEntity.status(500)
-                            .body(Map.of("error", "User with id " + userId + " not found and no users available."));
+                        Map<String, String> response = new HashMap<>();
+                        response.put("error", "User with id " + userId + " not found and no users available.");
+                        return ResponseEntity.status(500).body(response);
                     }
                     // Используем первого доступного пользователя
                     userId = users.get(0).getId();
@@ -63,8 +67,9 @@ public class FavoriteController {
             
             Object productIdObj = request.get("productId");
             if (productIdObj == null) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "productId is required"));
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "productId is required");
+                return ResponseEntity.badRequest().body(response);
             }
             
             Long productId;
@@ -75,20 +80,23 @@ public class FavoriteController {
                     productId = Long.parseLong(productIdObj.toString());
                 }
             } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid productId format: " + productIdObj));
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "Invalid productId format: " + productIdObj);
+                return ResponseEntity.badRequest().body(response);
             }
             
             FavoriteDTO favorite = favoriteService.addFavorite(userId, productId);
             return ResponseEntity.ok(favorite);
         } catch (RuntimeException e) {
             e.printStackTrace(); // Логируем ошибку
-            return ResponseEntity.status(500)
-                .body(Map.of("error", e.getMessage()));
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(response);
         } catch (Exception e) {
             e.printStackTrace(); // Логируем ошибку
-            return ResponseEntity.status(500)
-                .body(Map.of("error", "Internal server error: " + e.getMessage()));
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Internal server error: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
     

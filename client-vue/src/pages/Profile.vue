@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useApi } from '../composables/useApi';
 
-const { auth: authApi } = useApi();
+const { auth: authApi, orders: ordersApi, suggestions: suggestionsApi } = useApi();
 
 const isAuthenticated = ref(false);
 const showLoginForm = ref(true);
@@ -22,6 +22,12 @@ const userData = ref({
   cartItems: []
 });
 
+const userOrders = ref([]);
+const userSuggestions = ref([]);
+const isLoadingOrders = ref(false);
+const isLoadingSuggestions = ref(false);
+const activeTab = ref('orders'); // 'orders' or 'suggestions'
+
 const userInitials = computed(() => {
   if (!userData.value.fullName) return '?';
   return userData.value.fullName
@@ -30,6 +36,76 @@ const userInitials = computed(() => {
     .join('')
     .toUpperCase();
 });
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0
+  }).format(price);
+};
+
+const getStatusText = (status) => {
+  const statusMap = {
+    'PENDING': 'В обработке',
+    'CONFIRMED': 'Подтверждён',
+    'DELIVERED': 'Доставлен',
+    'CANCELLED': 'Отменён'
+  };
+  return statusMap[status] || status;
+};
+
+const getStatusColor = (status) => {
+  const colorMap = {
+    'PENDING': 'bg-yellow-100 text-yellow-800',
+    'CONFIRMED': 'bg-blue-100 text-blue-800',
+    'DELIVERED': 'bg-green-100 text-green-800',
+    'CANCELLED': 'bg-red-100 text-red-800'
+  };
+  return colorMap[status] || 'bg-gray-100 text-gray-800';
+};
+
+const loadUserOrders = async () => {
+  if (!isAuthenticated.value) return;
+  
+  isLoadingOrders.value = true;
+  try {
+    const response = await ordersApi.getByUser();
+    userOrders.value = response.data || [];
+  } catch (error) {
+    console.error('Ошибка загрузки заказов:', error);
+    userOrders.value = [];
+  } finally {
+    isLoadingOrders.value = false;
+  }
+};
+
+const loadUserSuggestions = async () => {
+  if (!isAuthenticated.value) return;
+  
+  isLoadingSuggestions.value = true;
+  try {
+    const response = await suggestionsApi.getByUser();
+    userSuggestions.value = response.data || [];
+  } catch (error) {
+    console.error('Ошибка загрузки предложений:', error);
+    userSuggestions.value = [];
+  } finally {
+    isLoadingSuggestions.value = false;
+  }
+};
 
 const isValidEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -82,6 +158,9 @@ const handleRegister = async () => {
     registerEmail.value = '';
     registerPassword.value = '';
     
+    // Загружаем историю заказов и предложений
+    await Promise.all([loadUserOrders(), loadUserSuggestions()]);
+    
   } catch (error) {
     errorMessage.value = error.response?.data?.message || 'Ошибка регистрации. Попробуйте позже.';
     console.error('Registration error:', error);
@@ -125,6 +204,9 @@ const handleLogin = async () => {
     loginEmail.value = '';
     loginPassword.value = '';
     
+    // Загружаем историю заказов и предложений
+    await Promise.all([loadUserOrders(), loadUserSuggestions()]);
+    
   } catch (error) {
     errorMessage.value = error.response?.data?.message || 'Неверный email или пароль';
     console.error('Login error:', error);
@@ -147,7 +229,7 @@ const handleLogout = () => {
   showLoginForm.value = true;
 };
 
-const checkAuth = () => {
+const checkAuth = async () => {
   const token = localStorage.getItem('authToken');
   const savedUser = localStorage.getItem('user');
   
@@ -161,6 +243,8 @@ const checkAuth = () => {
         if (parsedUser?.id) {
           localStorage.setItem('userId', parsedUser.id.toString());
         }
+        // Загружаем историю заказов и предложений
+        await Promise.all([loadUserOrders(), loadUserSuggestions()]);
       }
     } catch (e) {
       localStorage.removeItem('authToken');
@@ -174,7 +258,7 @@ onMounted(checkAuth);
 </script>
 
 <template>
-  <div class="max-w-md mx-auto mt-12 p-8 bg-white rounded-xl shadow-md">
+  <div class="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-xl shadow-md">
     <h2 class="text-3xl font-bold mb-8 text-center">Профиль</h2>
     
     <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
@@ -291,6 +375,113 @@ onMounted(checkAuth);
         </div>
         <h3 class="text-xl font-semibold">{{ userData.fullName }}</h3>
         <p class="text-gray-500">{{ userData.email }}</p>
+      </div>
+      
+      <!-- Табы для истории заказов и предложений -->
+      <div class="mb-6 flex justify-center gap-2 border-b border-gray-200">
+        <button
+          @click="activeTab = 'orders'"
+          :class="[
+            'px-6 py-2 font-medium transition-colors',
+            activeTab === 'orders' 
+              ? 'text-lime-600 border-b-2 border-lime-600' 
+              : 'text-gray-500 hover:text-gray-700'
+          ]"
+        >
+          Заказы ({{ userOrders.length }})
+        </button>
+        <button
+          @click="activeTab = 'suggestions'"
+          :class="[
+            'px-6 py-2 font-medium transition-colors',
+            activeTab === 'suggestions' 
+              ? 'text-lime-600 border-b-2 border-lime-600' 
+              : 'text-gray-500 hover:text-gray-700'
+          ]"
+        >
+          Предложения ({{ userSuggestions.length }})
+        </button>
+      </div>
+      
+      <!-- История заказов -->
+      <div v-if="activeTab === 'orders'" class="text-left mb-6">
+        <div v-if="isLoadingOrders" class="text-center py-8">
+          <p class="text-gray-500">Загрузка заказов...</p>
+        </div>
+        <div v-else-if="userOrders.length === 0" class="text-center py-8">
+          <p class="text-gray-500">У вас пока нет оформленных заказов</p>
+        </div>
+        <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+          <div 
+            v-for="order in userOrders" 
+            :key="order.id"
+            class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+          >
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h4 class="font-semibold text-lg">Заказ #{{ order.id }}</h4>
+                <p class="text-sm text-gray-500">{{ formatDate(order.createdAt) }}</p>
+              </div>
+              <span :class="['px-3 py-1 rounded-full text-xs font-medium', getStatusColor(order.status)]">
+                {{ getStatusText(order.status) }}
+              </span>
+            </div>
+            
+            <div class="mb-3">
+              <p class="text-sm font-medium text-gray-700 mb-2">Товары:</p>
+              <div class="space-y-2">
+                <div 
+                  v-for="item in order.items" 
+                  :key="item.id"
+                  class="flex justify-between items-center bg-white rounded p-2"
+                >
+                  <div class="flex-1">
+                    <p class="font-medium text-sm">{{ item.product?.title || 'Товар' }}</p>
+                    <p class="text-xs text-gray-500">Количество: {{ item.quantity }} × {{ formatPrice(item.price) }}</p>
+                  </div>
+                  <p class="font-semibold text-sm">{{ formatPrice(item.price * item.quantity) }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-between items-center pt-3 border-t border-gray-200">
+              <span class="text-sm text-gray-600">Итого:</span>
+              <span class="text-xl font-bold text-lime-600">{{ formatPrice(order.totalPrice) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- История предложений -->
+      <div v-if="activeTab === 'suggestions'" class="text-left mb-6">
+        <div v-if="isLoadingSuggestions" class="text-center py-8">
+          <p class="text-gray-500">Загрузка предложений...</p>
+        </div>
+        <div v-else-if="userSuggestions.length === 0" class="text-center py-8">
+          <p class="text-gray-500">У вас пока нет отправленных предложений</p>
+        </div>
+        <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+          <div 
+            v-for="suggestion in userSuggestions" 
+            :key="suggestion.id"
+            class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+          >
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex-1">
+                <h4 class="font-semibold text-lg text-lime-600">{{ suggestion.productName }}</h4>
+                <p class="text-sm text-gray-500">{{ formatDate(suggestion.createdAt) }}</p>
+              </div>
+            </div>
+            <div class="mb-2">
+              <p class="text-sm font-medium text-gray-700 mb-1">Автор:</p>
+              <p class="text-sm text-gray-600">{{ suggestion.author }}</p>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-1">Описание:</p>
+              <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ suggestion.description }}</p>
+            </div>
+          </div>
+        </div>
       </div>
       
       <button

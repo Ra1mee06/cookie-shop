@@ -1,11 +1,13 @@
 <script setup>
 import { useApi } from '../composables/useApi'
 import { ref, computed, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import CartItemList from './CartItemList.vue'
 import InfoBlock from './InfoBlock.vue'
 import DrawerHead from './DrawerHead.vue'
 
 const { orders: ordersApi } = useApi();
+const router = useRouter();
 
 const props = defineProps({
   totalPrice: Number,
@@ -16,8 +18,21 @@ const { cart, closeDrawer } = inject('cart')
 
 const isCreating = ref(false)
 const orderId = ref(null)
+const showAuthModal = ref(false)
+
+const isAuthenticated = () => {
+  const userId = localStorage.getItem('userId')
+  const authToken = localStorage.getItem('authToken')
+  return !!(userId && authToken)
+}
 
 const createOrder = async () => {
+  // Проверка авторизации
+  if (!isAuthenticated()) {
+    showAuthModal.value = true
+    return
+  }
+
   try {
     isCreating.value = true
     const orderData = {
@@ -34,10 +49,24 @@ const createOrder = async () => {
     orderId.value = response.data.id
   } catch (err) {
     console.error("Ошибка создания заказа:", err)
-    alert('Ошибка при создании заказа. Попробуйте позже.')
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      showAuthModal.value = true
+    } else {
+      alert('Ошибка при создании заказа. Попробуйте позже.')
+    }
   } finally {
     isCreating.value = false
   }
+}
+
+const goToProfile = () => {
+  showAuthModal.value = false
+  closeDrawer()
+  router.push('/profile')
+}
+
+const closeAuthModal = () => {
+  showAuthModal.value = false
 }
 
 const cartIsEmpty = computed(() => cart.value.length === 0)
@@ -101,4 +130,45 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
       </div>
     </div>
   </div>
+
+  <!-- Модальное окно авторизации -->
+  <transition name="modal-fade">
+    <div 
+      v-if="showAuthModal" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click="closeAuthModal"
+    >
+      <transition name="modal-content">
+        <div 
+          v-if="showAuthModal"
+          class="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl"
+          @click.stop
+        >
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+              <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Вы не авторизованы</h3>
+            <p class="text-gray-600 mb-6">Для оформления заказа необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
+            <div class="flex gap-4 justify-center">
+              <button 
+                @click="closeAuthModal"
+                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Отмена
+              </button>
+              <button 
+                @click="goToProfile"
+                class="px-6 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+              >
+                Перейти к авторизации
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </transition>
 </template>

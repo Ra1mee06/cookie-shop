@@ -3,9 +3,12 @@ import { reactive, watch, ref, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
 import debounce from 'lodash.debounce'
 import { inject } from 'vue'
+import { useRouter } from 'vue-router'
 import CardList from '../components/CardList.vue'
 import { useSuggestions } from '@/composables/useSuggestions';
 import ProductModal from '@/components/ProductModal.vue'
+
+const router = useRouter()
 
 const { products: productsApi } = useApi()
 const selectedProduct = ref(null)
@@ -29,11 +32,23 @@ const {
   showSuggestionForm, 
   isLoading, 
   isSubmitted, 
+  showAuthModal,
+  suggestionId,
   suggestion, 
   isValid, 
   submitSuggestion, 
   resetForm 
 } = useSuggestions()
+
+const goToProfile = () => {
+  showAuthModal.value = false
+  showSuggestionForm.value = false
+  router.push('/profile')
+}
+
+const closeAuthModal = () => {
+  showAuthModal.value = false
+}
 
 const openForm = () => {
   resetForm();
@@ -215,7 +230,7 @@ watch(favorites, () => {
   }
 }, { deep: true, immediate: false })
 
-watch(filters, fetchItems)
+watch(filters, fetchItems, { deep: true })
 </script>
 
 <template>
@@ -344,6 +359,9 @@ watch(filters, fetchItems)
               </svg>
             </div>
             <h3 class="text-2xl font-bold text-gray-800 mb-2">Спасибо за ваше предложение!</h3>
+            <p class="text-gray-600 mb-4" v-if="suggestionId">
+              Номер вашего предложения: <strong class="text-indigo-600">#{{ suggestionId }}</strong>
+            </p>
             <p class="text-gray-600 mb-6">Мы обязательно рассмотрим его в ближайшее время.</p>
             <button 
               @click="closeForm"
@@ -352,6 +370,47 @@ watch(filters, fetchItems)
             >
               Закрыть форму
             </button>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </transition>
+
+  <!-- Модальное окно авторизации для предложений -->
+  <transition name="modal-fade">
+    <div 
+      v-if="showAuthModal" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click="closeAuthModal"
+    >
+      <transition name="modal-content">
+        <div 
+          v-if="showAuthModal"
+          class="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl"
+          @click.stop
+        >
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+              <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Вы не авторизованы</h3>
+            <p class="text-gray-600 mb-6">Для отправки предложения необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
+            <div class="flex gap-4 justify-center">
+              <button 
+                @click="closeAuthModal"
+                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Отмена
+              </button>
+              <button 
+                @click="goToProfile"
+                class="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+              >
+                Перейти к авторизации
+              </button>
+            </div>
           </div>
         </div>
       </transition>

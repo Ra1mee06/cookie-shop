@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -39,13 +40,22 @@ public class AuthController {
             
             // Валидация обязательных полей
             if (email == null || email.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email is required"));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Email is required");
+                return ResponseEntity.badRequest().body(response);
             }
             if (password == null || password.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Password is required"));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Password is required");
+                return ResponseEntity.badRequest().body(response);
             }
             if (fullName == null || fullName.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Full name is required"));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Full name is required");
+                return ResponseEntity.badRequest().body(response);
             }
             
             Map<String, Object> result = authService.register(username, email, password, fullName);
@@ -57,7 +67,10 @@ public class AuthController {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Internal server error: " + e.getMessage()));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Internal server error: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 }

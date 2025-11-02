@@ -16,8 +16,37 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
     
-    public List<ProductDTO> getAllProducts() {
-        return productRepository.findAll().stream()
+    public List<ProductDTO> getAllProducts(String search, String sortBy, String sortOrder) {
+        List<Product> products;
+        
+        // Фильтрация по поисковому запросу
+        if (search != null && !search.trim().isEmpty()) {
+            products = productRepository.findByTitleContainingIgnoreCase(search.trim());
+        } else {
+            products = productRepository.findAll();
+        }
+        
+        // Сортировка
+        if (sortBy != null && sortBy.equals("price")) {
+            if (sortOrder != null && sortOrder.equalsIgnoreCase("desc")) {
+                // Сортировка по убыванию цены
+                products = products.stream()
+                        .sorted((p1, p2) -> p2.getPrice().compareTo(p1.getPrice()))
+                        .collect(Collectors.toList());
+            } else {
+                // Сортировка по возрастанию цены
+                products = products.stream()
+                        .sorted((p1, p2) -> p1.getPrice().compareTo(p2.getPrice()))
+                        .collect(Collectors.toList());
+            }
+        } else {
+            // Сортировка по названию (по умолчанию)
+            products = products.stream()
+                    .sorted((p1, p2) -> p1.getTitle().compareToIgnoreCase(p2.getTitle()))
+                    .collect(Collectors.toList());
+        }
+        
+        return products.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

@@ -18,8 +18,11 @@ public class ProductController {
     private ProductService productService;
     
     @GetMapping
-    public ResponseEntity<List<ProductDTO>> getAllProducts() {
-        List<ProductDTO> products = productService.getAllProducts();
+    public ResponseEntity<List<ProductDTO>> getAllProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        List<ProductDTO> products = productService.getAllProducts(search, sortBy, sortOrder);
         return ResponseEntity.ok(products);
     }
     
