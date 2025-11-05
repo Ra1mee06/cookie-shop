@@ -1,14 +1,26 @@
 // WebConfig.java
 package com.cookieshop.config;
 
+import com.cookieshop.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Bean
+    public AdminInterceptor adminInterceptor() {
+        return new AdminInterceptor(userRepository);
+    }
     
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -20,6 +32,18 @@ public class WebConfig {
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
+            }
+            
+            @Override
+            public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
+                registry.addResourceHandler("/uploads/**")
+                        .addResourceLocations("file:uploads/");
+            }
+
+            @Override
+            public void addInterceptors(@NonNull InterceptorRegistry registry) {
+                registry.addInterceptor(adminInterceptor())
+                        .addPathPatterns("/api/admin/**");
             }
         };
     }

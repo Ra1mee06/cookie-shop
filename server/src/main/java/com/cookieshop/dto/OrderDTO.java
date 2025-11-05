@@ -13,6 +13,13 @@ public class OrderDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<OrderItemDTO> items = new ArrayList<>();
+    private String recipient;
+    private String address;
+    private String comment;
+    private String promoCode;
+    private String paymentMethod;
+    private BigDecimal tip;
+    private BigDecimal discount;
     
     public OrderDTO() {}
     
@@ -82,6 +89,62 @@ public class OrderDTO {
     
     public void setItems(List<OrderItemDTO> items) {
         this.items = items;
+    }
+    
+    public String getRecipient() {
+        return recipient;
+    }
+    
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
+    }
+    
+    public String getAddress() {
+        return address;
+    }
+    
+    public void setAddress(String address) {
+        this.address = address;
+    }
+    
+    public String getComment() {
+        return comment;
+    }
+    
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+    
+    public String getPromoCode() {
+        return promoCode;
+    }
+    
+    public void setPromoCode(String promoCode) {
+        this.promoCode = promoCode;
+    }
+    
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+    
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+    
+    public BigDecimal getTip() {
+        return tip;
+    }
+    
+    public void setTip(BigDecimal tip) {
+        this.tip = tip;
+    }
+    
+    public BigDecimal getDiscount() {
+        return discount;
+    }
+    
+    public void setDiscount(BigDecimal discount) {
+        this.discount = discount;
     }
 }
 

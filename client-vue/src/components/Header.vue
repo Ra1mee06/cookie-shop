@@ -5,6 +5,17 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const currentRoute = computed(() => router.currentRoute.value.path);
 
+const isAdmin = computed(() => {
+  try {
+    const saved = localStorage.getItem('user')
+    if (!saved) return false
+    const u = JSON.parse(saved)
+    return u?.role === 'ADMIN'
+  } catch (e) {
+    return false
+  }
+})
+
 defineProps({
   totalPrice: Number,
 });
@@ -52,6 +63,15 @@ const emit = defineEmits(['openDrawer']);
       >
         <img src="/profile.svg" alt="Profile" class="transition-all duration-300" />
         <span>Профиль</span>
+      </router-link>
+
+      <router-link
+        v-if="isAdmin"
+        to="/admin"
+        class="flex items-center gap-3 text-gray-500 hover:text-black p-2 rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 hover:shadow-md"
+      >
+        <img src="/package-icon.png" alt="Admin" class="w-6 h-6 transition-all duration-300" />
+        <span>Админ</span>
       </router-link>
     </ul>
   </header>

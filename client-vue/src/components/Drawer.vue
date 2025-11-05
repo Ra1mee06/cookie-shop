@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import CartItemList from './CartItemList.vue'
 import InfoBlock from './InfoBlock.vue'
 import DrawerHead from './DrawerHead.vue'
+import OrderModal from './OrderModal.vue'
 
 const { orders: ordersApi } = useApi();
 const router = useRouter();
@@ -19,6 +20,7 @@ const { cart, closeDrawer } = inject('cart')
 const isCreating = ref(false)
 const orderId = ref(null)
 const showAuthModal = ref(false)
+const showOrderModal = ref(false)
 
 const isAuthenticated = () => {
   const userId = localStorage.getItem('userId')
@@ -26,22 +28,33 @@ const isAuthenticated = () => {
   return !!(userId && authToken)
 }
 
-const createOrder = async () => {
+const openOrderModal = () => {
   // Проверка авторизации
   if (!isAuthenticated()) {
     showAuthModal.value = true
     return
   }
+  
+  showOrderModal.value = true
+}
 
+const closeOrderModal = () => {
+  showOrderModal.value = false
+}
+
+const handleOrderSubmit = async (orderFormData) => {
   try {
     isCreating.value = true
+    showOrderModal.value = false
+    
     const orderData = {
       items: cart.value.map(item => ({
         productId: item.id,
         quantity: item.quantity,
         price: item.price
       })),
-      totalPrice: props.totalPrice
+      totalPrice: props.totalPrice,
+      ...orderFormData
     }
     
     const response = await ordersApi.create(orderData)
@@ -121,7 +134,7 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
 
           <button
             :disabled="buttonDisabled"
-            @click="createOrder"
+            @click="openOrderModal"
             class="mt-2 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg bg-lime-500 w-full rounded-xl py-3 text-white disabled:bg-slate-300 hover:bg-lime-600 active:bg-lime-700 active:scale-95 cursor-pointer"
           >
             Оформить заказ
@@ -171,4 +184,12 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
       </transition>
     </div>
   </transition>
+
+  <!-- Модальное окно оформления заказа -->
+  <OrderModal
+    :isOpen="showOrderModal"
+    :totalPrice="totalPrice"
+    @close="closeOrderModal"
+    @submit="handleOrderSubmit"
+  />
 </template>

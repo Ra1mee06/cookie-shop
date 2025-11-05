@@ -15,6 +15,9 @@ public class AuthService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private AdminInviteService adminInviteService;
+    
     public Map<String, Object> login(String email, String password) {
         Optional<User> userOptional = userRepository.findByEmail(email);
         Map<String, Object> response = new HashMap<>();
@@ -38,7 +41,7 @@ public class AuthService {
         return response;
     }
     
-    public Map<String, Object> register(String username, String email, String password, String fullName) {
+    public Map<String, Object> register(String username, String email, String password, String fullName, String adminInviteCode) {
         Map<String, Object> response = new HashMap<>();
         
         // Генерируем username из email, если он не передан
@@ -77,13 +80,120 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(password); // Сохраняем пароль как есть
         user.setFullName(fullName);
+        // Default role
         user.setRole("USER");
+        // If invite provided, consume and grant admin
+        if (adminInviteCode != null && !adminInviteCode.trim().isEmpty()) {
+            try {
+                adminInviteService.consumeInviteOrThrow(adminInviteCode.trim());
+                user.setRole("ADMIN");
+            } catch (IllegalArgumentException ex) {
+                // leave role as USER; attach message
+                response.put("inviteError", ex.getMessage());
+            }
+        }
         
         User savedUser = userRepository.save(user);
         
         response.put("success", true);
         response.put("user", savedUser);
         response.put("message", "Registration successful");
+        
+        return response;
+    }
+    
+    public Map<String, Object> updateProfile(Long userId, String email, String fullName, String username) {
+        Map<String, Object> response = new HashMap<>();
+        
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (!userOptional.isPresent()) {
+            response.put("success", false);
+            response.put("message", "User not found");
+            return response;
+        }
+        
+        User user = userOptional.get();
+        
+        // Проверяем уникальность email, если он изменился
+        if (email != null && !email.equals(user.getEmail())) {
+            if (userRepository.findByEmail(email).isPresent()) {
+                response.put("success", false);
+                response.put("message", "Email already exists");
+                return response;
+            }
+            user.setEmail(email);
+        }
+        
+        // Проверяем уникальность username, если он изменился
+        if (username != null && !username.equals(user.getUsername())) {
+            if (userRepository.findByUsername(username).isPresent()) {
+                response.put("success", false);
+                response.put("message", "Username already exists");
+                return response;
+            }
+            user.setUsername(username);
+        }
+        
+        // Обновляем fullName
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName);
+        }
+        
+        User updatedUser = userRepository.save(user);
+        
+        response.put("success", true);
+        response.put("user", updatedUser);
+        response.put("message", "Profile updated successfully");
+        
+        return response;
+    }
+    
+    public Map<String, Object> updatePassword(Long userId, String oldPassword, String newPassword) {
+        Map<String, Object> response = new HashMap<>();
+        
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (!userOptional.isPresent()) {
+            response.put("success", false);
+            response.put("message", "User not found");
+            return response;
+        }
+        
+        User user = userOptional.get();
+        
+        // Проверяем старый пароль
+        if (!oldPassword.equals(user.getPassword())) {
+            response.put("success", false);
+            response.put("message", "Invalid old password");
+            return response;
+        }
+        
+        // Устанавливаем новый пароль
+        user.setPassword(newPassword);
+        userRepository.save(user);
+        
+        response.put("success", true);
+        response.put("message", "Password updated successfully");
+        
+        return response;
+    }
+    
+    public Map<String, Object> updateAvatar(Long userId, String avatarUrl) {
+        Map<String, Object> response = new HashMap<>();
+        
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (!userOptional.isPresent()) {
+            response.put("success", false);
+            response.put("message", "User not found");
+            return response;
+        }
+        
+        User user = userOptional.get();
+        user.setAvatarUrl(avatarUrl);
+        User updatedUser = userRepository.save(user);
+        
+        response.put("success", true);
+        response.put("user", updatedUser);
+        response.put("message", "Avatar updated successfully");
         
         return response;
     }

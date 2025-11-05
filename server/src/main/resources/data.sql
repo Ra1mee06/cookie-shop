@@ -4,6 +4,11 @@ INSERT INTO users (username, email, password, full_name, role)
 SELECT 'admin', 'admin@cookieshop.com', 'admin123', 'Администратор', 'ADMIN'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
+-- Главный администратор, указанный пользователем
+INSERT INTO users (username, email, password, full_name, role)
+SELECT 'Ra1mee', 'filipovichdaniil8@gmail.com', 'password1532', 'Ra1mee', 'ADMIN'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'Ra1mee');
+
 INSERT INTO users (username, email, password, full_name, role) 
 SELECT 'user1', 'user1@mail.com', 'user123', 'Иван Иванов', 'USER'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'user1');

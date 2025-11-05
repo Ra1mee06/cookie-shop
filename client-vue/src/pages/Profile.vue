@@ -1,8 +1,24 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, inject } from 'vue';
 import { useApi } from '../composables/useApi';
+import { useFavorites } from '../composables/useFavorites';
 
 const { auth: authApi, orders: ordersApi, suggestions: suggestionsApi } = useApi();
+
+// Получаем функции для работы с избранным
+const favoritesState = inject('favorites');
+let syncLocalFavoritesToServer = null;
+let clearLocalOnLogout = null;
+
+if (favoritesState) {
+  syncLocalFavoritesToServer = favoritesState.syncLocalFavoritesToServer;
+  clearLocalOnLogout = favoritesState.clearLocalOnLogout;
+} else {
+  // Если inject не работает, используем напрямую useFavorites
+  const { syncLocalFavoritesToServer: syncFn, clearLocalOnLogout: clearFn } = useFavorites();
+  syncLocalFavoritesToServer = syncFn;
+  clearLocalOnLogout = clearFn;
+}
 
 const isAuthenticated = ref(false);
 const showLoginForm = ref(true);
@@ -14,6 +30,7 @@ const loginPassword = ref('');
 const registerName = ref('');
 const registerEmail = ref('');
 const registerPassword = ref('');
+const adminInviteCode = ref('');
 
 const userData = ref({
   fullName: '',
@@ -28,6 +45,223 @@ const isLoadingOrders = ref(false);
 const isLoadingSuggestions = ref(false);
 const activeTab = ref('orders'); // 'orders' or 'suggestions'
 
+const showEditForm = ref(false);
+const isSaving = ref(false);
+const isSavingPassword = ref(false);
+const editError = ref('');
+const editSuccess = ref('');
+
+const editForm = ref({
+  email: '',
+  fullName: '',
+  username: '',
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
+
+const selectedAvatar = ref('');
+const avatarFile = ref(null);
+const avatarPreview = ref('');
+const showAvatarModal = ref(false);
+const isUploadingAvatar = ref(false);
+const cookieAvatars = [
+  '/cookies/cookie1.png',
+  '/cookies/cookie2.png',
+  '/cookies/cookie3.png',
+  '/cookies/cookie4.png',
+  '/cookies/cookie5.png',
+  '/cookies/cookie6.png',
+  '/cookies/cookie7.png',
+  '/cookies/cookie8.png'
+];
+
+const openEditForm = () => {
+  editForm.value = {
+    email: userData.value.email || '',
+    fullName: userData.value.fullName || '',
+    username: userData.value.username || '',
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+  editError.value = '';
+  editSuccess.value = '';
+  showEditForm.value = true;
+};
+
+const closeEditForm = () => {
+  showEditForm.value = false;
+  editError.value = '';
+  editSuccess.value = '';
+};
+
+const handleUpdateProfile = async () => {
+  editError.value = '';
+  editSuccess.value = '';
+  
+  if (!editForm.value.email || !isValidEmail(editForm.value.email)) {
+    editError.value = 'Введите корректный email';
+    return;
+  }
+  
+  if (!editForm.value.fullName || !editForm.value.fullName.trim()) {
+    editError.value = 'Введите имя';
+    return;
+  }
+  
+  if (!editForm.value.username || !editForm.value.username.trim()) {
+    editError.value = 'Введите логин';
+    return;
+  }
+  
+  isSaving.value = true;
+  
+  try {
+    const response = await authApi.updateProfile({
+      email: editForm.value.email.toLowerCase().trim(),
+      fullName: editForm.value.fullName.trim(),
+      username: editForm.value.username.trim()
+    });
+    
+    if (response.data.success) {
+      userData.value = {
+        ...userData.value,
+        ...response.data.user
+      };
+      localStorage.setItem('user', JSON.stringify(userData.value));
+      editSuccess.value = 'Профиль успешно обновлён!';
+      setTimeout(() => {
+        closeEditForm();
+      }, 1500);
+    } else {
+      editError.value = response.data.message || 'Ошибка обновления профиля';
+    }
+  } catch (error) {
+    editError.value = error.response?.data?.message || 'Ошибка обновления профиля';
+    console.error('Update profile error:', error);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const handleUpdatePassword = async () => {
+  editError.value = '';
+  editSuccess.value = '';
+  
+  if (!editForm.value.oldPassword) {
+    editError.value = 'Введите текущий пароль';
+    return;
+  }
+  
+  if (!editForm.value.newPassword || editForm.value.newPassword.length < 6) {
+    editError.value = 'Новый пароль должен содержать минимум 6 символов';
+    return;
+  }
+  
+  if (editForm.value.newPassword !== editForm.value.confirmPassword) {
+    editError.value = 'Пароли не совпадают';
+    return;
+  }
+  
+  isSavingPassword.value = true;
+  
+  try {
+    const response = await authApi.updatePassword({
+      oldPassword: editForm.value.oldPassword,
+      newPassword: editForm.value.newPassword,
+      confirmPassword: editForm.value.confirmPassword
+    });
+    
+    if (response.data.success) {
+      editSuccess.value = 'Пароль успешно изменён!';
+      editForm.value.oldPassword = '';
+      editForm.value.newPassword = '';
+      editForm.value.confirmPassword = '';
+      setTimeout(() => {
+        editSuccess.value = '';
+      }, 3000);
+    } else {
+      editError.value = response.data.message || 'Ошибка изменения пароля';
+    }
+  } catch (error) {
+    editError.value = error.response?.data?.message || 'Ошибка изменения пароля';
+    console.error('Update password error:', error);
+  } finally {
+    isSavingPassword.value = false;
+  }
+};
+
+const openAvatarModal = () => {
+  selectedAvatar.value = userData.value.avatarUrl || '';
+  avatarFile.value = null;
+  avatarPreview.value = '';
+  showAvatarModal.value = true;
+};
+
+const closeAvatarModal = () => {
+  showAvatarModal.value = false;
+  selectedAvatar.value = '';
+  avatarFile.value = null;
+  avatarPreview.value = '';
+};
+
+const selectCookieAvatar = (avatarUrl) => {
+  selectedAvatar.value = avatarUrl;
+  avatarFile.value = null;
+  avatarPreview.value = '';
+};
+
+const handleFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимальный размер: 5 МБ');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      alert('Выберите изображение');
+      return;
+    }
+    avatarFile.value = file;
+    selectedAvatar.value = '';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      avatarPreview.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const handleAvatarUpload = async () => {
+  if (!selectedAvatar.value && !avatarFile.value) {
+    alert('Выберите аватар или загрузите изображение');
+    return;
+  }
+  
+  isUploadingAvatar.value = true;
+  
+  try {
+    const response = await authApi.updateAvatar(selectedAvatar.value || null, avatarFile.value || null);
+    
+    if (response.data.success) {
+      userData.value = {
+        ...userData.value,
+        ...response.data.user
+      };
+      localStorage.setItem('user', JSON.stringify(userData.value));
+      closeAvatarModal();
+    } else {
+      alert(response.data.message || 'Ошибка загрузки аватара');
+    }
+  } catch (error) {
+    alert(error.response?.data?.message || 'Ошибка загрузки аватара');
+    console.error('Avatar upload error:', error);
+  } finally {
+    isUploadingAvatar.value = false;
+  }
+};
+
 const userInitials = computed(() => {
   if (!userData.value.fullName) return '?';
   return userData.value.fullName
@@ -35,6 +269,16 @@ const userInitials = computed(() => {
     .map(n => n[0])
     .join('')
     .toUpperCase();
+});
+
+const avatarUrl = computed(() => {
+  if (userData.value.avatarUrl) {
+    if (userData.value.avatarUrl.startsWith('/uploads/')) {
+      return `http://localhost:8080${userData.value.avatarUrl}`;
+    }
+    return userData.value.avatarUrl;
+  }
+  return null;
 });
 
 const formatDate = (dateString) => {
@@ -50,11 +294,18 @@ const formatDate = (dateString) => {
 };
 
 const formatPrice = (price) => {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 0
-  }).format(price);
+  if (!price) return '0 бун';
+  const numPrice = typeof price === 'number' ? price : parseFloat(price);
+  return `${Math.round(numPrice)} бун`;
+};
+
+const getPaymentMethodText = (method) => {
+  const methodMap = {
+    'CASH': 'Наличными',
+    'CARD_ONLINE': 'Картой сразу',
+    'CARD_ON_DELIVERY': 'Картой при получении'
+  };
+  return methodMap[method] || method;
 };
 
 const getStatusText = (status) => {
@@ -135,7 +386,8 @@ const handleRegister = async () => {
     const response = await authApi.register({
       fullName: registerName.value.trim(),
       email: registerEmail.value.toLowerCase().trim(),
-      password: registerPassword.value
+      password: registerPassword.value,
+      adminInviteCode: adminInviteCode.value || undefined
     });
 
     const data = response.data;
@@ -157,6 +409,16 @@ const handleRegister = async () => {
     registerName.value = '';
     registerEmail.value = '';
     registerPassword.value = '';
+    adminInviteCode.value = '';
+    
+    // Синхронизируем локальное избранное с сервером после регистрации
+    if (syncLocalFavoritesToServer) {
+      try {
+        await syncLocalFavoritesToServer();
+      } catch (err) {
+        console.error('Ошибка при синхронизации избранного:', err);
+      }
+    }
     
     // Загружаем историю заказов и предложений
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
@@ -204,6 +466,15 @@ const handleLogin = async () => {
     loginEmail.value = '';
     loginPassword.value = '';
     
+    // Синхронизируем локальное избранное с сервером после входа
+    if (syncLocalFavoritesToServer) {
+      try {
+        await syncLocalFavoritesToServer();
+      } catch (err) {
+        console.error('Ошибка при синхронизации избранного:', err);
+      }
+    }
+    
     // Загружаем историю заказов и предложений
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
     
@@ -216,6 +487,11 @@ const handleLogin = async () => {
 };
 
 const handleLogout = () => {
+  // Очищаем локальное избранное при выходе (серверное остается)
+  if (clearLocalOnLogout) {
+    clearLocalOnLogout();
+  }
+  
   isAuthenticated.value = false;
   userData.value = {
     fullName: '',
@@ -243,6 +519,16 @@ const checkAuth = async () => {
         if (parsedUser?.id) {
           localStorage.setItem('userId', parsedUser.id.toString());
         }
+        
+        // Синхронизируем локальное избранное с сервером при восстановлении сессии
+        if (syncLocalFavoritesToServer) {
+          try {
+            await syncLocalFavoritesToServer();
+          } catch (err) {
+            console.error('Ошибка при синхронизации избранного:', err);
+          }
+        }
+        
         // Загружаем историю заказов и предложений
         await Promise.all([loadUserOrders(), loadUserSuggestions()]);
       }
@@ -347,6 +633,17 @@ onMounted(checkAuth);
           >
         </div>
         
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Секретный код администратора (необязательно)</label>
+          <input 
+            type="text" 
+            v-model="adminInviteCode"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            placeholder="Вставьте код, если он у вас есть"
+            @keyup.enter="handleRegister"
+          >
+        </div>
+        
         <button
           @click="handleRegister"
           :disabled="isLoading"
@@ -370,11 +667,42 @@ onMounted(checkAuth);
     
     <div v-else class="text-center">
       <div class="mb-6">
-        <div class="w-20 h-20 bg-lime-100 rounded-full mx-auto flex items-center justify-center mb-4">
-          <span class="text-2xl font-bold text-lime-600">{{ userInitials }}</span>
+        <div class="relative inline-block mb-4">
+          <div 
+            class="w-24 h-24 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-lime-200 shadow-lg"
+            :class="avatarUrl ? 'bg-white' : 'bg-gradient-to-br from-lime-100 to-lime-200'"
+          >
+            <img 
+              v-if="avatarUrl" 
+              :src="avatarUrl" 
+              :alt="userData.fullName"
+              class="w-full h-full object-cover"
+            >
+            <span v-else class="text-3xl font-bold text-lime-600">{{ userInitials }}</span>
+          </div>
+          <button
+            @click="openAvatarModal"
+            class="absolute bottom-0 right-0 w-8 h-8 bg-lime-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-lime-600 transition-colors"
+            title="Изменить аватар"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
-        <h3 class="text-xl font-semibold">{{ userData.fullName }}</h3>
-        <p class="text-gray-500">{{ userData.email }}</p>
+        <h3 class="text-2xl font-bold text-gray-800 mb-1">{{ userData.fullName }}</h3>
+        <p class="text-gray-600 mb-1">{{ userData.email }}</p>
+        <p v-if="userData.username" class="text-sm text-gray-500">@{{ userData.username }}</p>
+        <button
+          @click="openEditForm"
+          class="mt-4 px-6 py-2 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 flex items-center gap-2 mx-auto"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Редактировать профиль
+        </button>
       </div>
       
       <!-- Табы для истории заказов и предложений -->
@@ -406,47 +734,150 @@ onMounted(checkAuth);
       <!-- История заказов -->
       <div v-if="activeTab === 'orders'" class="text-left mb-6">
         <div v-if="isLoadingOrders" class="text-center py-8">
-          <p class="text-gray-500">Загрузка заказов...</p>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600"></div>
+          <p class="text-gray-500 mt-2">Загрузка заказов...</p>
         </div>
         <div v-else-if="userOrders.length === 0" class="text-center py-8">
-          <p class="text-gray-500">У вас пока нет оформленных заказов</p>
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p class="text-gray-500 mt-2">У вас пока нет оформленных заказов</p>
         </div>
-        <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+        <div v-else class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
           <div 
             v-for="order in userOrders" 
             :key="order.id"
-            class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+            class="bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
           >
-            <div class="flex justify-between items-start mb-3">
+            <div class="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
               <div>
-                <h4 class="font-semibold text-lg">Заказ #{{ order.id }}</h4>
-                <p class="text-sm text-gray-500">{{ formatDate(order.createdAt) }}</p>
+                <div class="flex items-center gap-2 mb-1">
+                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h4 class="font-bold text-lg text-gray-800">Заказ #{{ order.id }}</h4>
+                </div>
+                <p class="text-sm text-gray-500 flex items-center gap-1">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {{ formatDate(order.createdAt) }}
+                </p>
               </div>
-              <span :class="['px-3 py-1 rounded-full text-xs font-medium', getStatusColor(order.status)]">
+              <span :class="['px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm', getStatusColor(order.status)]">
                 {{ getStatusText(order.status) }}
               </span>
             </div>
             
-            <div class="mb-3">
-              <p class="text-sm font-medium text-gray-700 mb-2">Товары:</p>
+            <!-- Информация о доставке и получателе -->
+            <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div v-if="order.recipient" class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                <p class="text-xs font-semibold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Получатель
+                </p>
+                <p class="text-sm font-medium text-gray-800">{{ order.recipient }}</p>
+              </div>
+              <div v-if="order.address" class="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                <p class="text-xs font-semibold text-purple-600 uppercase mb-1 flex items-center gap-1">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Адрес доставки
+                </p>
+                <p class="text-sm font-medium text-gray-800">{{ order.address }}</p>
+              </div>
+              <div v-if="order.paymentMethod" class="bg-green-50 rounded-lg p-3 border border-green-100">
+                <p class="text-xs font-semibold text-green-600 uppercase mb-1 flex items-center gap-1">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Способ оплаты
+                </p>
+                <p class="text-sm font-medium text-gray-800">{{ getPaymentMethodText(order.paymentMethod) }}</p>
+              </div>
+              <div v-if="order.promoCode" class="bg-yellow-50 rounded-lg p-3 border border-yellow-100">
+                <p class="text-xs font-semibold text-yellow-600 uppercase mb-1 flex items-center gap-1">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Промокод
+                </p>
+                <p class="text-sm font-medium text-gray-800">{{ order.promoCode }}</p>
+              </div>
+            </div>
+
+            <!-- Комментарий к заказу -->
+            <div v-if="order.comment" class="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <p class="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-2">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                Комментарий к заказу
+              </p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ order.comment }}</p>
+            </div>
+
+            <!-- Товары -->
+            <div class="mb-4">
+              <p class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <svg class="h-4 w-4 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                Товары:
+              </p>
               <div class="space-y-2">
                 <div 
                   v-for="item in order.items" 
                   :key="item.id"
-                  class="flex justify-between items-center bg-white rounded p-2"
+                  class="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-100 hover:border-lime-300 transition-colors"
                 >
-                  <div class="flex-1">
-                    <p class="font-medium text-sm">{{ item.product?.title || 'Товар' }}</p>
-                    <p class="text-xs text-gray-500">Количество: {{ item.quantity }} × {{ formatPrice(item.price) }}</p>
+                  <div class="flex items-center gap-3 flex-1">
+                    <div v-if="item.product?.imageUrl" class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img :src="item.product.imageUrl" :alt="item.product.title" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-semibold text-sm text-gray-800 truncate">{{ item.product?.title || 'Товар' }}</p>
+                      <p class="text-xs text-gray-500">Количество: {{ item.quantity }} × {{ formatPrice(item.price / item.quantity) }}</p>
+                    </div>
                   </div>
-                  <p class="font-semibold text-sm">{{ formatPrice(item.price * item.quantity) }}</p>
+                  <p class="font-bold text-sm text-lime-600 ml-4">{{ formatPrice(item.price) }}</p>
                 </div>
               </div>
             </div>
             
-            <div class="flex justify-between items-center pt-3 border-t border-gray-200">
-              <span class="text-sm text-gray-600">Итого:</span>
-              <span class="text-xl font-bold text-lime-600">{{ formatPrice(order.totalPrice) }}</span>
+            <!-- Итоговая информация -->
+            <div class="bg-lime-50 rounded-lg p-4 border-2 border-lime-100 space-y-2">
+              <div v-if="order.discount && parseFloat(order.discount) > 0" class="flex justify-between items-center text-sm">
+                <span class="text-gray-700 flex items-center gap-2">
+                  <svg class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Скидка:
+                </span>
+                <span class="font-semibold text-green-600">-{{ formatPrice(order.discount) }}</span>
+              </div>
+              <div v-if="order.tip && parseFloat(order.tip) > 0" class="flex justify-between items-center text-sm">
+                <span class="text-gray-700 flex items-center gap-2">
+                  <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Чаевые:
+                </span>
+                <span class="font-semibold text-blue-600">{{ formatPrice(order.tip) }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2 border-t-2 border-lime-200">
+                <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Итого:
+                </span>
+                <span class="text-2xl font-bold text-lime-600">{{ formatPrice(order.totalPrice) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -455,30 +886,54 @@ onMounted(checkAuth);
       <!-- История предложений -->
       <div v-if="activeTab === 'suggestions'" class="text-left mb-6">
         <div v-if="isLoadingSuggestions" class="text-center py-8">
-          <p class="text-gray-500">Загрузка предложений...</p>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600"></div>
+          <p class="text-gray-500 mt-2">Загрузка предложений...</p>
         </div>
         <div v-else-if="userSuggestions.length === 0" class="text-center py-8">
-          <p class="text-gray-500">У вас пока нет отправленных предложений</p>
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          <p class="text-gray-500 mt-2">У вас пока нет отправленных предложений</p>
         </div>
-        <div v-else class="space-y-4 max-h-96 overflow-y-auto">
+        <div v-else class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
           <div 
             v-for="suggestion in userSuggestions" 
             :key="suggestion.id"
-            class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+            class="bg-gradient-to-br from-white to-lime-50 rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
           >
-            <div class="flex justify-between items-start mb-2">
+            <div class="flex justify-between items-start mb-4 pb-3 border-b border-lime-200">
               <div class="flex-1">
-                <h4 class="font-semibold text-lg text-lime-600">{{ suggestion.productName }}</h4>
-                <p class="text-sm text-gray-500">{{ formatDate(suggestion.createdAt) }}</p>
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <h4 class="font-bold text-lg text-lime-700">{{ suggestion.productName }}</h4>
+                </div>
+                <p class="text-sm text-gray-500 flex items-center gap-1">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {{ formatDate(suggestion.createdAt) }}
+                </p>
               </div>
             </div>
-            <div class="mb-2">
-              <p class="text-sm font-medium text-gray-700 mb-1">Автор:</p>
-              <p class="text-sm text-gray-600">{{ suggestion.author }}</p>
+            <div class="bg-white rounded-lg p-4 mb-3 border border-lime-100">
+              <p class="text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center gap-2">
+                <svg class="h-3 w-3 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Автор
+              </p>
+              <p class="text-sm font-medium text-gray-700">{{ suggestion.author }}</p>
             </div>
-            <div>
-              <p class="text-sm font-medium text-gray-700 mb-1">Описание:</p>
-              <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ suggestion.description }}</p>
+            <div class="bg-white rounded-lg p-4 border border-lime-100">
+              <p class="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-2">
+                <svg class="h-3 w-3 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                </svg>
+                Описание
+              </p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ suggestion.description }}</p>
             </div>
           </div>
         </div>
@@ -490,6 +945,235 @@ onMounted(checkAuth);
       >
         Выйти
       </button>
+    </div>
+    
+    <!-- Модальное окно редактирования профиля -->
+    <div 
+      v-if="showEditForm" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="closeEditForm"
+    >
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h3 class="text-2xl font-bold text-gray-800">Редактирование профиля</h3>
+          <button
+            @click="closeEditForm"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-6">
+          <div v-if="editError" class="p-3 bg-red-100 text-red-700 rounded-lg">
+            {{ editError }}
+          </div>
+          <div v-if="editSuccess" class="p-3 bg-green-100 text-green-700 rounded-lg">
+            {{ editSuccess }}
+          </div>
+          
+          <!-- Основная информация -->
+          <div>
+            <h4 class="text-lg font-semibold text-gray-800 mb-4">Основная информация</h4>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Имя</label>
+                <input 
+                  type="text" 
+                  v-model="editForm.fullName"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Ваше имя"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  v-model="editForm.email"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Ваш email"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Логин</label>
+                <input 
+                  type="text" 
+                  v-model="editForm.username"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Ваш логин"
+                >
+              </div>
+              
+              <button
+                @click="handleUpdateProfile"
+                :disabled="isSaving"
+                class="w-full py-3 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-70"
+              >
+                <span v-if="!isSaving">Сохранить изменения</span>
+                <span v-else>Сохранение...</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Смена пароля -->
+          <div class="border-t border-gray-200 pt-6">
+            <h4 class="text-lg font-semibold text-gray-800 mb-4">Смена пароля</h4>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Текущий пароль</label>
+                <input 
+                  type="password" 
+                  v-model="editForm.oldPassword"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Введите текущий пароль"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Новый пароль</label>
+                <input 
+                  type="password" 
+                  v-model="editForm.newPassword"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Придумайте новый пароль"
+                >
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Подтвердите пароль</label>
+                <input 
+                  type="password" 
+                  v-model="editForm.confirmPassword"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  placeholder="Подтвердите новый пароль"
+                >
+              </div>
+              
+              <button
+                @click="handleUpdatePassword"
+                :disabled="isSavingPassword"
+                class="w-full py-3 bg-blue-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-blue-600 active:bg-blue-700 active:scale-95 disabled:opacity-70"
+              >
+                <span v-if="!isSavingPassword">Изменить пароль</span>
+                <span v-else>Изменение...</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Модальное окно выбора аватара -->
+    <div 
+      v-if="showAvatarModal" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="closeAvatarModal"
+    >
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h3 class="text-2xl font-bold text-gray-800">Выбор аватара</h3>
+          <button
+            @click="closeAvatarModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-6">
+          <!-- Предпросмотр -->
+          <div class="text-center">
+            <div class="inline-block">
+              <div 
+                class="w-32 h-32 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-lime-200 shadow-lg"
+                :class="avatarPreview || selectedAvatar ? 'bg-white' : 'bg-gradient-to-br from-lime-100 to-lime-200'"
+              >
+                <img 
+                  v-if="avatarPreview" 
+                  :src="avatarPreview" 
+                  alt="Preview"
+                  class="w-full h-full object-cover"
+                >
+                <img 
+                  v-else-if="selectedAvatar" 
+                  :src="selectedAvatar" 
+                  alt="Selected"
+                  class="w-full h-full object-cover"
+                >
+                <span v-else class="text-4xl font-bold text-lime-600">{{ userInitials }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Загрузка своего изображения -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3">Загрузить своё изображение</label>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-lime-500 transition-colors">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleFileSelect"
+                class="hidden"
+                id="avatar-upload"
+              >
+              <label
+                for="avatar-upload"
+                class="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-sm text-gray-600">Нажмите, чтобы выбрать файл</span>
+                <span class="text-xs text-gray-400">Макс. размер: 5 МБ</span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Выбор из печенек -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3">Или выберите печеньку</label>
+            <div class="grid grid-cols-4 gap-4">
+              <button
+                v-for="(cookie, index) in cookieAvatars"
+                :key="index"
+                @click="selectCookieAvatar(cookie)"
+                :class="[
+                  'w-full aspect-square rounded-lg overflow-hidden border-4 transition-all transform hover:scale-105',
+                  selectedAvatar === cookie 
+                    ? 'border-lime-500 shadow-lg ring-2 ring-lime-300' 
+                    : 'border-gray-200 hover:border-lime-300'
+                ]"
+              >
+                <img :src="cookie" :alt="`Cookie ${index + 1}`" class="w-full h-full object-cover">
+              </button>
+            </div>
+          </div>
+          
+          <!-- Кнопки действий -->
+          <div class="flex gap-4">
+            <button
+              @click="closeAvatarModal"
+              class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg transition-all hover:bg-gray-300"
+            >
+              Отмена
+            </button>
+            <button
+              @click="handleAvatarUpload"
+              :disabled="isUploadingAvatar || (!selectedAvatar && !avatarFile)"
+              class="flex-1 py-3 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="!isUploadingAvatar">Сохранить аватар</span>
+              <span v-else>Загрузка...</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
