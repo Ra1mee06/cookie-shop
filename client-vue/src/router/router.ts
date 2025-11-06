@@ -2,10 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/pages/Home.vue'
 import Favorites from '@/pages/Favorites.vue'
 import Profile from '@/pages/Profile.vue'
-const AdminOrders = () => import('@/pages/AdminOrders.vue')
+const AdminOrders = () => import('@/pages/AdminOrders.vue').catch(err => {
+  console.error('Failed to load AdminOrders component:', err);
+  // Возвращаем пустой компонент вместо редиректа
+  return { default: { template: '<div>Ошибка загрузки страницы заказов</div>' } };
+});
 const AdminUsers = () => import('@/pages/AdminUsers.vue')
 const AdminPromos = () => import('@/pages/AdminPromos.vue')
 const AdminInvites = () => import('@/pages/AdminInvites.vue')
+const AdminSuggestions = () => import('@/pages/AdminSuggestions.vue')
 
 const routes = [
   {
@@ -53,6 +58,11 @@ const routes = [
     path: '/admin/invites',
     name: 'AdminInvites',
     component: AdminInvites
+  },
+  {
+    path: '/admin/suggestions',
+    name: 'AdminSuggestions',
+    component: AdminSuggestions
   }
 ]
 
@@ -61,18 +71,31 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, from, next) => {
+  console.log('Router navigation:', { from: from.path, to: to.path });
+  
   if (to.path.startsWith('/admin')) {
     try {
       const saved = localStorage.getItem('user')
-      if (!saved) return next('/profile')
+      if (!saved) {
+        console.log('No user found, redirecting to profile')
+        return next('/profile')
+      }
       const u = JSON.parse(saved)
-      if (u?.role !== 'ADMIN') return next('/profile')
+      console.log('User role:', u?.role);
+      if (u?.role !== 'ADMIN') {
+        console.log('User is not admin, redirecting to profile')
+        return next('/profile')
+      }
+      console.log('Admin access granted, navigating to:', to.path)
+      next()
     } catch (e) {
+      console.error('Error checking admin access:', e)
       return next('/profile')
     }
+  } else {
+    next()
   }
-  next()
 })
 
 export default router

@@ -7,6 +7,8 @@ import { useRouter } from 'vue-router'
 import CardList from '../components/CardList.vue'
 import { useSuggestions } from '@/composables/useSuggestions';
 import ProductModal from '@/components/ProductModal.vue'
+import NewsFeed from '@/components/NewsFeed.vue'
+import DecorativeElements from '@/components/DecorativeElements.vue'
 
 const router = useRouter()
 
@@ -249,31 +251,83 @@ watch(filters, fetchItems, { deep: true })
 </script>
 
 <template>
-  <!-- Остальная часть шаблона остается БЕЗ ИЗМЕНЕНИЙ -->
-  <div class="flex justify-between items-center">
-    <h2 class="text-3xl font-bold mb-8">Все изделия</h2>
-
-    <div class="flex gap-4">
-      <select @change="onChangeSelect" class="py-2 px-3 border rounded-md outline-none">
-        <option value="title">По названию</option>
-        <option value="price">По цене (дешевые)</option>
-        <option value="-price">По цене (дорогие)</option>
-      </select>
-
-      <div class="relative">
-        <img class="absolute left-4 top-3" src="/search.svg" />
-        <input
-          @input="onChangeSearchInput"
-          class="border rounded-md py-2 pl-11 pr-4 outline-none focus:border-gray-400"
-          type="text"
-          placeholder="Поиск..."
-        />
-      </div>
+  <div class="relative space-y-8">
+    <!-- Декоративные элементы -->
+    <DecorativeElements />
+    
+    <!-- News Feed / Лента новостей и спецпредложений -->
+    <div class="relative z-10">
+      <NewsFeed />
     </div>
     
-  </div>
+    <!-- Hero Section -->
+    <div class="relative z-10 text-center mb-12 py-12 md:py-16 bg-gradient-to-r from-cookie-50 via-beige-50 to-brown-50 rounded-2xl border-2 border-beige-200 overflow-hidden">
+      <!-- Декоративные элементы внутри hero -->
+      <div class="absolute top-0 left-0 w-32 h-32 bg-cookie-200/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      <div class="absolute bottom-0 right-0 w-40 h-40 bg-brown-200/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+      
+      <div class="relative z-10">
+        <div class="inline-block mb-6 animate-bounce">
+          <div class="w-24 h-24 md:w-32 md:h-32 mx-auto rounded-full bg-gradient-to-br from-cookie-400 to-brown-500 shadow-2xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+            <span class="text-4xl md:text-6xl">🍪</span>
+          </div>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold mb-4 bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent animate-fade-in">
+          Добро пожаловать в RЯЛЬНА COOKIES!
+        </h1>
+        <p class="text-lg md:text-xl text-brown-600 font-medium animate-fade-in-delay">
+          Откройте для себя самые вкусные печеньки в истории
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+          <div class="px-6 py-3 bg-white/80 backdrop-blur-sm rounded-xl border-2 border-cookie-200 shadow-lg">
+            <div class="text-2xl font-bold text-cookie-600">100%</div>
+            <div class="text-sm text-brown-600">Натурально</div>
+          </div>
+          <div class="px-6 py-3 bg-white/80 backdrop-blur-sm rounded-xl border-2 border-cookie-200 shadow-lg">
+            <div class="text-2xl font-bold text-cookie-600">24/7</div>
+            <div class="text-sm text-brown-600">Доставка</div>
+          </div>
+          <div class="px-6 py-3 bg-white/80 backdrop-blur-sm rounded-xl border-2 border-cookie-200 shadow-lg">
+            <div class="text-2xl font-bold text-cookie-600">⭐</div>
+            <div class="text-sm text-brown-600">Лучшее качество</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <div class="mt-10">
+    <!-- Filters Section -->
+    <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div class="flex items-center gap-4">
+        <div class="hidden md:block w-16 h-1 bg-gradient-to-r from-cookie-500 to-brown-600 rounded-full"></div>
+        <h2 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+          Все изделия
+        </h2>
+        <div class="hidden md:block w-16 h-1 bg-gradient-to-r from-brown-600 to-cookie-500 rounded-full"></div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+        <div class="relative flex-1 sm:flex-none">
+          <img class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 opacity-60" src="/search.svg" />
+          <input
+            @input="onChangeSearchInput"
+            class="input-field pl-12 pr-4"
+            type="text"
+            placeholder="Поиск по названию..."
+          />
+        </div>
+
+        <select 
+          @change="onChangeSelect" 
+          class="input-field appearance-none bg-white cursor-pointer pr-10"
+        >
+          <option value="title">По названию</option>
+          <option value="price">По цене (дешевые)</option>
+          <option value="-price">По цене (дорогие)</option>
+        </select>
+      </div>
+    </div>
+
+  <div class="relative z-10 mt-10">
     <CardList 
       :items="items"
       @add-to-favorite="addToFavorite"
@@ -288,18 +342,22 @@ watch(filters, fetchItems, { deep: true })
     />
   </div>
 
-  <div class="w-full flex justify-center mt-8 mb-12"> 
+  <div class="relative z-10 w-full flex justify-center mt-12 mb-8"> 
     <button 
       @click="openForm"
-      class="px-6 py-3 bg-indigo-500 text-white rounded-xl transition-all duration-300 
-             hover:-translate-y-1 hover:shadow-lg hover:bg-indigo-600 focus:outline-none
-             transform mx-auto" 
+      class="btn-primary text-lg px-8 py-4"
     >
-      Предложить товар
+      <span class="flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Предложить товар
+      </span>
     </button>
   </div>
 
-  <!-- Модальное окно предложения товара остается БЕЗ ИЗМЕНЕНИЙ -->
+  <!-- Модальное окно предложения товара -->
+  <div class="relative z-50">
   <transition name="modal-fade">
     <div 
       v-if="showSuggestionForm" 
@@ -308,35 +366,37 @@ watch(filters, fetchItems, { deep: true })
       <transition name="modal-content">
         <div 
           v-if="showSuggestionForm"
-          class="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl"
+          class="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl border-2 border-beige-200"
         >
           <div v-if="!isSubmitted">
-            <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Ваше предложение</h3>
+            <h3 class="text-3xl font-extrabold mb-6 text-center bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+              Ваше предложение
+            </h3>
             
-            <div class="space-y-4">
+            <div class="space-y-5">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Ваше имя</label>
+                <label class="block text-sm font-semibold text-brown-700 mb-2">Ваше имя</label>
                 <input 
                   v-model="suggestion.author"
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="input-field"
                   placeholder="Как к вам обращаться?"
                 >
               </div>
               
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Название товара</label>
+                <label class="block text-sm font-semibold text-brown-700 mb-2">Название товара</label>
                 <input 
                   v-model="suggestion.productName"
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="input-field"
                   placeholder="Какой товар предлагаете?"
                 >
               </div>
               
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                <label class="block text-sm font-semibold text-brown-700 mb-2">Описание</label>
                 <textarea 
                   v-model="suggestion.description"
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 h-32"
+                  class="input-field h-32 resize-none"
                   placeholder="Опишите товар или ваше предложение"
                 ></textarea>
               </div>
@@ -345,15 +405,14 @@ watch(filters, fetchItems, { deep: true })
             <div class="flex justify-end gap-4 mt-8">
               <button 
                 @click="closeForm"
-                class="px-5 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-200"
+                class="btn-secondary"
               >
                 Отмена
               </button>
               <button 
                 @click="submitForm"
                 :disabled="!isValid() || isLoading"
-                class="px-5 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 
-                       disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-md"
+                class="btn-primary"
               >
                 <span v-if="!isLoading">Отправить</span>
                 <span v-else class="flex items-center justify-center gap-2">
@@ -368,20 +427,21 @@ watch(filters, fetchItems, { deep: true })
           </div>
 
           <div v-else class="text-center py-6">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-              <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-cookie-100 to-green-100 mb-6 shadow-lg">
+              <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800 mb-2">Спасибо за ваше предложение!</h3>
-            <p class="text-gray-600 mb-4" v-if="suggestionId">
-              Номер вашего предложения: <strong class="text-indigo-600">#{{ suggestionId }}</strong>
+            <h3 class="text-3xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent mb-3">
+              Спасибо за ваше предложение!
+            </h3>
+            <p class="text-brown-600 mb-4 font-medium" v-if="suggestionId">
+              Номер вашего предложения: <strong class="text-cookie-600 text-lg">#{{ suggestionId }}</strong>
             </p>
-            <p class="text-gray-600 mb-6">Мы обязательно рассмотрим его в ближайшее время.</p>
+            <p class="text-brown-600 mb-8">Мы обязательно рассмотрим его в ближайшее время.</p>
             <button 
               @click="closeForm"
-              class="px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 
-                     transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg mx-auto"
+              class="btn-primary"
             >
               Закрыть форму
             </button>
@@ -401,27 +461,29 @@ watch(filters, fetchItems, { deep: true })
       <transition name="modal-content">
         <div 
           v-if="showAuthModal"
-          class="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl"
+          class="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl border-2 border-beige-200"
           @click.stop
         >
           <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-              <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-yellow-100 to-orange-100 mb-6 shadow-lg">
+              <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800 mb-2">Вы не авторизованы</h3>
-            <p class="text-gray-600 mb-6">Для отправки предложения необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
+            <h3 class="text-2xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent mb-3">
+              Вы не авторизованы
+            </h3>
+            <p class="text-brown-600 mb-8">Для отправки предложения необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
             <div class="flex gap-4 justify-center">
               <button 
                 @click="closeAuthModal"
-                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                class="btn-secondary"
               >
                 Отмена
               </button>
               <button 
                 @click="goToProfile"
-                class="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+                class="btn-primary"
               >
                 Перейти к авторизации
               </button>
@@ -431,6 +493,7 @@ watch(filters, fetchItems, { deep: true })
       </transition>
     </div>
   </transition>
+  </div>
 
   <!-- Модальное окно авторизации для избранного -->
   <transition name="modal-fade">
@@ -442,27 +505,29 @@ watch(filters, fetchItems, { deep: true })
       <transition name="modal-content">
         <div 
           v-if="showFavoriteAuthModal"
-          class="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl"
+          class="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl border-2 border-beige-200"
           @click.stop
         >
           <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-              <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-yellow-100 to-orange-100 mb-6 shadow-lg">
+              <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800 mb-2">Вы не авторизованы</h3>
-            <p class="text-gray-600 mb-6">Для добавления товара в избранное необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
+            <h3 class="text-2xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent mb-3">
+              Вы не авторизованы
+            </h3>
+            <p class="text-brown-600 mb-8">Для добавления товара в избранное необходимо авторизоваться. Пожалуйста, войдите в систему.</p>
             <div class="flex gap-4 justify-center">
               <button 
                 @click="closeFavoriteAuthModal"
-                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                class="btn-secondary"
               >
                 Отмена
               </button>
               <button 
                 @click="goToProfile"
-                class="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+                class="btn-primary"
               >
                 Перейти к авторизации
               </button>
@@ -472,4 +537,5 @@ watch(filters, fetchItems, { deep: true })
       </transition>
     </div>
   </transition>
+  </div>
 </template>

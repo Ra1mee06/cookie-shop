@@ -8,8 +8,12 @@ defineProps({
 
 <template>
   <div class="flex flex-col items-center text-center w-72 mx-auto">
-    <img height="80" width="80" :src="imageUrl" alt="Info image" />
-    <h2 class="mt-4 text-2xl font-medium">{{ title }}</h2>
-    <p class="text-gray-400 mt-2">{{ description }}</p>
+    <div class="w-24 h-24 rounded-full bg-gradient-to-br from-cookie-100 to-beige-100 flex items-center justify-center mb-6 shadow-lg">
+      <img height="60" width="60" :src="imageUrl" alt="Info image" class="object-contain" />
+    </div>
+    <h2 class="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent mb-3">
+      {{ title }}
+    </h2>
+    <p class="text-brown-600 font-medium">{{ description }}</p>
   </div>
 </template>

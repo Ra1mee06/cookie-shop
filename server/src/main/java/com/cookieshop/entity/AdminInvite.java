@@ -17,6 +17,10 @@ public class AdminInvite extends BaseEntity {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "used_by")
+    private User usedBy;
+
     @Column(name = "expires_at")
     private OffsetDateTime expiresAt;
 
@@ -26,6 +30,8 @@ public class AdminInvite extends BaseEntity {
     public void setUsed(boolean used) { this.used = used; }
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    public User getUsedBy() { return usedBy; }
+    public void setUsedBy(User usedBy) { this.usedBy = usedBy; }
     public OffsetDateTime getExpiresAt() { return expiresAt; }
     public void setExpiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; }
 }

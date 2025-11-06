@@ -82,18 +82,21 @@ public class AuthService {
         user.setFullName(fullName);
         // Default role
         user.setRole("USER");
+        
+        // Save user first to get the ID
+        User savedUser = userRepository.save(user);
+        
         // If invite provided, consume and grant admin
         if (adminInviteCode != null && !adminInviteCode.trim().isEmpty()) {
             try {
-                adminInviteService.consumeInviteOrThrow(adminInviteCode.trim());
-                user.setRole("ADMIN");
+                adminInviteService.consumeInviteOrThrow(adminInviteCode.trim(), savedUser.getId());
+                savedUser.setRole("ADMIN");
+                savedUser = userRepository.save(savedUser);
             } catch (IllegalArgumentException ex) {
                 // leave role as USER; attach message
                 response.put("inviteError", ex.getMessage());
             }
         }
-        
-        User savedUser = userRepository.save(user);
         
         response.put("success", true);
         response.put("user", savedUser);

@@ -83,17 +83,22 @@ export const useApi = () => {
             remove: (id) => api.delete(`/admin/users/${id}`)
         },
         promocodes: {
-            list: () => api.get('/admin/promocodes'),
-            create: (data) => api.post('/admin/promocodes', data),
-            update: (id, data) => api.put(`/admin/promocodes/${id}`, data),
-            deactivate: (id) => api.delete(`/admin/promocodes/${id}`)
+            list: () => api.get('/admin/promos'),
+            create: (data) => api.post('/admin/promos', data),
+            update: (id, data) => api.put(`/admin/promos/${id}`, data),
+            deactivate: (id) => api.delete(`/admin/promos/${id}`)
         },
         suggestions: {
             list: (userId) => api.get('/admin/suggestions', { params: userId ? { userId } : {} }),
             remove: (id) => api.delete(`/admin/suggestions/${id}`)
         },
         invites: {
-            create: (expiresInHours) => api.post('/admin/invites', expiresInHours ? { expiresInHours } : {})
+            create: (expiresInHours) => {
+                const payload = expiresInHours ? { expiresInHours } : {}
+                return api.post('/admin/invites', payload)
+            },
+            list: () => api.get('/admin/invites'),
+            remove: (id) => api.delete(`/admin/invites/${id}`)
         }
     }
 

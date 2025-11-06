@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import { useApi } from '../composables/useApi';
 import { useFavorites } from '../composables/useFavorites';
 
+const router = useRouter();
 const { auth: authApi, orders: ordersApi, suggestions: suggestionsApi } = useApi();
 
 // Получаем функции для работы с избранным
@@ -65,6 +67,7 @@ const avatarFile = ref(null);
 const avatarPreview = ref('');
 const showAvatarModal = ref(false);
 const isUploadingAvatar = ref(false);
+const showAdminModal = ref(false);
 const cookieAvatars = [
   '/cookies/cookie1.png',
   '/cookies/cookie2.png',
@@ -75,6 +78,32 @@ const cookieAvatars = [
   '/cookies/cookie7.png',
   '/cookies/cookie8.png'
 ];
+
+const isAdmin = computed(() => {
+  return userData.value?.role === 'ADMIN';
+});
+
+const openAdminModal = () => {
+  showAdminModal.value = true;
+};
+
+const closeAdminModal = () => {
+  showAdminModal.value = false;
+};
+
+const navigateToAdmin = (path) => {
+  closeAdminModal();
+  console.log('Navigating to admin path:', path);
+  router.push(path).catch(err => {
+    console.error('Navigation error:', err);
+    if (err.name !== 'NavigationDuplicated') {
+      // Если это не дублирование навигации, попробуем еще раз
+      setTimeout(() => {
+        router.push(path);
+      }, 100);
+    }
+  });
+};
 
 const openEditForm = () => {
   editForm.value = {
@@ -544,15 +573,17 @@ onMounted(checkAuth);
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-xl shadow-md">
-    <h2 class="text-3xl font-bold mb-8 text-center">Профиль</h2>
+  <div class="max-w-2xl mx-auto p-8">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-8 text-center bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+      Профиль
+    </h2>
     
     <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
       {{ errorMessage }}
     </div>
     
     <div v-if="!isAuthenticated">
-      <div class="space-y-4" v-if="showLoginForm">
+      <div class="space-y-4" v-if="!isAuthenticated && showLoginForm">
         <h3 class="text-xl font-semibold text-center">Вход в аккаунт</h3>
         
         <div>
@@ -560,7 +591,7 @@ onMounted(checkAuth);
           <input 
             type="email" 
             v-model="loginEmail"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Ваш email"
             @keyup.enter="handleLogin"
           >
@@ -571,7 +602,7 @@ onMounted(checkAuth);
           <input 
             type="password" 
             v-model="loginPassword"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Ваш пароль"
             @keyup.enter="handleLogin"
           >
@@ -580,7 +611,7 @@ onMounted(checkAuth);
         <button
           @click="handleLogin"
           :disabled="isLoading"
-          class="w-full mt-4 py-3 bg-lime-500 text-white rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-70"
+          class="btn-primary w-full mt-4"
         >
           <span v-if="!isLoading">Войти</span>
           <span v-else>Вход...</span>
@@ -590,14 +621,14 @@ onMounted(checkAuth);
           Нет аккаунта? 
           <button 
             @click="showLoginForm = false"
-            class="text-lime-600 hover:text-lime-800 font-medium transition-colors"
+            class="text-cookie-600 hover:text-cookie-800 font-medium transition-colors"
           >
             Зарегистрироваться
           </button>
         </p>
       </div>
-      
-      <div class="space-y-4" v-else>
+
+      <div class="space-y-4" v-if="!isAuthenticated && !showLoginForm">
         <h3 class="text-xl font-semibold text-center">Регистрация</h3>
         
         <div>
@@ -605,7 +636,7 @@ onMounted(checkAuth);
           <input 
             type="text" 
             v-model="registerName"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Ваше имя"
             @keyup.enter="handleRegister"
           >
@@ -616,7 +647,7 @@ onMounted(checkAuth);
           <input 
             type="email" 
             v-model="registerEmail"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Ваш email"
             @keyup.enter="handleRegister"
           >
@@ -627,7 +658,7 @@ onMounted(checkAuth);
           <input 
             type="password" 
             v-model="registerPassword"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Придумайте пароль"
             @keyup.enter="handleRegister"
           >
@@ -638,7 +669,7 @@ onMounted(checkAuth);
           <input 
             type="text" 
             v-model="adminInviteCode"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+            class="input-field"
             placeholder="Вставьте код, если он у вас есть"
             @keyup.enter="handleRegister"
           >
@@ -647,7 +678,7 @@ onMounted(checkAuth);
         <button
           @click="handleRegister"
           :disabled="isLoading"
-          class="w-full mt-4 py-3 bg-lime-500 text-white rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-70"
+          class="btn-primary w-full mt-4"
         >
           <span v-if="!isLoading">Зарегистрироваться</span>
           <span v-else>Регистрация...</span>
@@ -657,7 +688,7 @@ onMounted(checkAuth);
           Уже есть аккаунт? 
           <button 
             @click="showLoginForm = true"
-            class="text-lime-600 hover:text-lime-800 font-medium transition-colors"
+            class="text-cookie-600 hover:text-cookie-800 font-medium transition-colors"
           >
             Войти
           </button>
@@ -669,8 +700,8 @@ onMounted(checkAuth);
       <div class="mb-6">
         <div class="relative inline-block mb-4">
           <div 
-            class="w-24 h-24 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-lime-200 shadow-lg"
-            :class="avatarUrl ? 'bg-white' : 'bg-gradient-to-br from-lime-100 to-lime-200'"
+            class="w-24 h-24 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-cookie-200 shadow-lg"
+            :class="avatarUrl ? 'bg-white' : 'bg-gradient-to-br from-cookie-100 to-beige-200'"
           >
             <img 
               v-if="avatarUrl" 
@@ -678,11 +709,11 @@ onMounted(checkAuth);
               :alt="userData.fullName"
               class="w-full h-full object-cover"
             >
-            <span v-else class="text-3xl font-bold text-lime-600">{{ userInitials }}</span>
+            <span v-else class="text-3xl font-bold text-cookie-600">{{ userInitials }}</span>
           </div>
           <button
             @click="openAvatarModal"
-            class="absolute bottom-0 right-0 w-8 h-8 bg-lime-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-lime-600 transition-colors"
+            class="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-r from-cookie-500 to-cookie-600 rounded-full flex items-center justify-center text-white shadow-lg hover:from-cookie-600 hover:to-cookie-700 transition-all transform hover:scale-110"
             title="Изменить аватар"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -696,12 +727,22 @@ onMounted(checkAuth);
         <p v-if="userData.username" class="text-sm text-gray-500">@{{ userData.username }}</p>
         <button
           @click="openEditForm"
-          class="mt-4 px-6 py-2 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 flex items-center gap-2 mx-auto"
+          class="btn-primary mt-4 flex items-center gap-2 mx-auto"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
           Редактировать профиль
+        </button>
+        <button
+          v-if="isAdmin"
+          @click="openAdminModal"
+          class="mt-3 px-6 py-2 bg-brown-700 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-brown-800 active:bg-brown-900 active:scale-95 flex items-center gap-2 mx-auto"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
+          </svg>
+          Панель управления
         </button>
       </div>
       
@@ -712,7 +753,7 @@ onMounted(checkAuth);
           :class="[
             'px-6 py-2 font-medium transition-colors',
             activeTab === 'orders' 
-              ? 'text-lime-600 border-b-2 border-lime-600' 
+              ? 'text-cookie-600 border-b-2 border-cookie-600' 
               : 'text-gray-500 hover:text-gray-700'
           ]"
         >
@@ -723,7 +764,7 @@ onMounted(checkAuth);
           :class="[
             'px-6 py-2 font-medium transition-colors',
             activeTab === 'suggestions' 
-              ? 'text-lime-600 border-b-2 border-lime-600' 
+              ? 'text-cookie-600 border-b-2 border-cookie-600' 
               : 'text-gray-500 hover:text-gray-700'
           ]"
         >
@@ -734,7 +775,7 @@ onMounted(checkAuth);
       <!-- История заказов -->
       <div v-if="activeTab === 'orders'" class="text-left mb-6">
         <div v-if="isLoadingOrders" class="text-center py-8">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600"></div>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cookie-600"></div>
           <p class="text-gray-500 mt-2">Загрузка заказов...</p>
         </div>
         <div v-else-if="userOrders.length === 0" class="text-center py-8">
@@ -752,7 +793,7 @@ onMounted(checkAuth);
             <div class="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
               <div>
                 <div class="flex items-center gap-2 mb-1">
-                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg class="h-5 w-5 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <h4 class="font-bold text-lg text-gray-800">Заказ #{{ order.id }}</h4>
@@ -824,7 +865,7 @@ onMounted(checkAuth);
             <!-- Товары -->
             <div class="mb-4">
               <p class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <svg class="h-4 w-4 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="h-4 w-4 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
                 Товары:
@@ -833,7 +874,7 @@ onMounted(checkAuth);
                 <div 
                   v-for="item in order.items" 
                   :key="item.id"
-                  class="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-100 hover:border-lime-300 transition-colors"
+                  class="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-100 hover:border-cookie-300 transition-colors"
                 >
                   <div class="flex items-center gap-3 flex-1">
                     <div v-if="item.product?.imageUrl" class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
@@ -844,13 +885,13 @@ onMounted(checkAuth);
                       <p class="text-xs text-gray-500">Количество: {{ item.quantity }} × {{ formatPrice(item.price / item.quantity) }}</p>
                     </div>
                   </div>
-                  <p class="font-bold text-sm text-lime-600 ml-4">{{ formatPrice(item.price) }}</p>
+                  <p class="font-bold text-sm text-cookie-600 ml-4">{{ formatPrice(item.price) }}</p>
                 </div>
               </div>
             </div>
             
             <!-- Итоговая информация -->
-            <div class="bg-lime-50 rounded-lg p-4 border-2 border-lime-100 space-y-2">
+            <div class="bg-cookie-50 rounded-lg p-4 border-2 border-cookie-100 space-y-2">
               <div v-if="order.discount && parseFloat(order.discount) > 0" class="flex justify-between items-center text-sm">
                 <span class="text-gray-700 flex items-center gap-2">
                   <svg class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -869,14 +910,14 @@ onMounted(checkAuth);
                 </span>
                 <span class="font-semibold text-blue-600">{{ formatPrice(order.tip) }}</span>
               </div>
-              <div class="flex justify-between items-center pt-2 border-t-2 border-lime-200">
+              <div class="flex justify-between items-center pt-2 border-t-2 border-cookie-200">
                 <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg class="h-5 w-5 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Итого:
                 </span>
-                <span class="text-2xl font-bold text-lime-600">{{ formatPrice(order.totalPrice) }}</span>
+                <span class="text-2xl font-bold text-cookie-600">{{ formatPrice(order.totalPrice) }}</span>
               </div>
             </div>
           </div>
@@ -886,7 +927,7 @@ onMounted(checkAuth);
       <!-- История предложений -->
       <div v-if="activeTab === 'suggestions'" class="text-left mb-6">
         <div v-if="isLoadingSuggestions" class="text-center py-8">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600"></div>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cookie-600"></div>
           <p class="text-gray-500 mt-2">Загрузка предложений...</p>
         </div>
         <div v-else-if="userSuggestions.length === 0" class="text-center py-8">
@@ -901,13 +942,13 @@ onMounted(checkAuth);
             :key="suggestion.id"
             class="bg-gradient-to-br from-white to-lime-50 rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
           >
-            <div class="flex justify-between items-start mb-4 pb-3 border-b border-lime-200">
+            <div class="flex justify-between items-start mb-4 pb-3 border-b border-cookie-200">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
-                  <svg class="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg class="h-5 w-5 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  <h4 class="font-bold text-lg text-lime-700">{{ suggestion.productName }}</h4>
+                  <h4 class="font-bold text-lg text-cookie-700">{{ suggestion.productName }}</h4>
                 </div>
                 <p class="text-sm text-gray-500 flex items-center gap-1">
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -917,18 +958,18 @@ onMounted(checkAuth);
                 </p>
               </div>
             </div>
-            <div class="bg-white rounded-lg p-4 mb-3 border border-lime-100">
+            <div class="bg-white rounded-lg p-4 mb-3 border border-cookie-100">
               <p class="text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center gap-2">
-                <svg class="h-3 w-3 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="h-3 w-3 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Автор
               </p>
               <p class="text-sm font-medium text-gray-700">{{ suggestion.author }}</p>
             </div>
-            <div class="bg-white rounded-lg p-4 border border-lime-100">
+            <div class="bg-white rounded-lg p-4 border border-cookie-100">
               <p class="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-2">
-                <svg class="h-3 w-3 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="h-3 w-3 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
                 </svg>
                 Описание
@@ -983,7 +1024,7 @@ onMounted(checkAuth);
                 <input 
                   type="text" 
                   v-model="editForm.fullName"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Ваше имя"
                 >
               </div>
@@ -993,7 +1034,7 @@ onMounted(checkAuth);
                 <input 
                   type="email" 
                   v-model="editForm.email"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Ваш email"
                 >
               </div>
@@ -1003,7 +1044,7 @@ onMounted(checkAuth);
                 <input 
                   type="text" 
                   v-model="editForm.username"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Ваш логин"
                 >
               </div>
@@ -1011,7 +1052,7 @@ onMounted(checkAuth);
               <button
                 @click="handleUpdateProfile"
                 :disabled="isSaving"
-                class="w-full py-3 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-70"
+                class="w-full py-3 bg-cookie-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-cookie-600 active:bg-cookie-700 active:scale-95 disabled:opacity-70"
               >
                 <span v-if="!isSaving">Сохранить изменения</span>
                 <span v-else>Сохранение...</span>
@@ -1028,7 +1069,7 @@ onMounted(checkAuth);
                 <input 
                   type="password" 
                   v-model="editForm.oldPassword"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Введите текущий пароль"
                 >
               </div>
@@ -1038,7 +1079,7 @@ onMounted(checkAuth);
                 <input 
                   type="password" 
                   v-model="editForm.newPassword"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Придумайте новый пароль"
                 >
               </div>
@@ -1048,7 +1089,7 @@ onMounted(checkAuth);
                 <input 
                   type="password" 
                   v-model="editForm.confirmPassword"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all"
+                  class="input-field"
                   placeholder="Подтвердите новый пароль"
                 >
               </div>
@@ -1091,8 +1132,8 @@ onMounted(checkAuth);
           <div class="text-center">
             <div class="inline-block">
               <div 
-                class="w-32 h-32 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-lime-200 shadow-lg"
-                :class="avatarPreview || selectedAvatar ? 'bg-white' : 'bg-gradient-to-br from-lime-100 to-lime-200'"
+                class="w-32 h-32 rounded-full mx-auto flex items-center justify-center overflow-hidden border-4 border-cookie-200 shadow-lg"
+                :class="avatarPreview || selectedAvatar ? 'bg-white' : 'bg-gradient-to-br from-cookie-100 to-lime-200'"
               >
                 <img 
                   v-if="avatarPreview" 
@@ -1106,7 +1147,7 @@ onMounted(checkAuth);
                   alt="Selected"
                   class="w-full h-full object-cover"
                 >
-                <span v-else class="text-4xl font-bold text-lime-600">{{ userInitials }}</span>
+                <span v-else class="text-4xl font-bold text-cookie-600">{{ userInitials }}</span>
               </div>
             </div>
           </div>
@@ -1114,7 +1155,7 @@ onMounted(checkAuth);
           <!-- Загрузка своего изображения -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-3">Загрузить своё изображение</label>
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-lime-500 transition-colors">
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-cookie-500 transition-colors">
               <input
                 type="file"
                 accept="image/*"
@@ -1146,8 +1187,8 @@ onMounted(checkAuth);
                 :class="[
                   'w-full aspect-square rounded-lg overflow-hidden border-4 transition-all transform hover:scale-105',
                   selectedAvatar === cookie 
-                    ? 'border-lime-500 shadow-lg ring-2 ring-lime-300' 
-                    : 'border-gray-200 hover:border-lime-300'
+                    ? 'border-cookie-500 shadow-lg ring-2 ring-lime-300' 
+                    : 'border-gray-200 hover:border-cookie-300'
                 ]"
               >
                 <img :src="cookie" :alt="`Cookie ${index + 1}`" class="w-full h-full object-cover">
@@ -1166,10 +1207,114 @@ onMounted(checkAuth);
             <button
               @click="handleAvatarUpload"
               :disabled="isUploadingAvatar || (!selectedAvatar && !avatarFile)"
-              class="flex-1 py-3 bg-lime-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-lime-600 active:bg-lime-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 py-3 bg-cookie-500 text-white rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:bg-cookie-600 active:bg-cookie-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span v-if="!isUploadingAvatar">Сохранить аватар</span>
               <span v-else>Загрузка...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Модальное окно меню администратора -->
+    <div 
+      v-if="showAdminModal" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      @click.self="closeAdminModal"
+    >
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h3 class="text-2xl font-bold text-gray-800">Панель управления администратора</h3>
+          <button
+            @click="closeAdminModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Пользователи -->
+            <button
+              @click="navigateToAdmin('/admin/users')"
+              class="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg group text-left"
+            >
+              <div class="flex items-center gap-4 mb-3">
+                <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                  <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <h4 class="text-xl font-bold text-gray-800">Пользователи</h4>
+              </div>
+              <p class="text-sm text-gray-600">Управление всеми зарегистрированными пользователями. Редактирование данных и удаление аккаунтов.</p>
+            </button>
+
+            <!-- Заказы -->
+            <button
+              @click="navigateToAdmin('/admin/orders')"
+              class="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-200 hover:border-green-400 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg group text-left"
+            >
+              <div class="flex items-center gap-4 mb-3">
+                <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:bg-green-600 transition-colors">
+                  <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h4 class="text-xl font-bold text-gray-800">Заказы</h4>
+              </div>
+              <p class="text-sm text-gray-600">Просмотр всех заказов и их содержимого. Управление статусами заказов.</p>
+            </button>
+
+            <!-- Предложения -->
+            <button
+              @click="navigateToAdmin('/admin/suggestions')"
+              class="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg group text-left"
+            >
+              <div class="flex items-center gap-4 mb-3">
+                <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                  <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <h4 class="text-xl font-bold text-gray-800">Предложения</h4>
+              </div>
+              <p class="text-sm text-gray-600">История всех предложений от пользователей. Просмотр и управление предложениями.</p>
+            </button>
+
+            <!-- Инвайт-коды -->
+            <button
+              @click="navigateToAdmin('/admin/invites')"
+              class="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border-2 border-orange-200 hover:border-orange-400 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg group text-left"
+            >
+              <div class="flex items-center gap-4 mb-3">
+                <div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center group-hover:bg-orange-600 transition-colors">
+                  <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <h4 class="text-xl font-bold text-gray-800">Инвайт-коды</h4>
+              </div>
+              <p class="text-sm text-gray-600">Создание секретных кодов для регистрации новых администраторов.</p>
+            </button>
+          </div>
+
+          <!-- Дополнительные ссылки -->
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <button
+              @click="navigateToAdmin('/admin/promocodes')"
+              class="w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+            >
+              <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="font-medium text-gray-700">Промокоды</span>
+              </div>
             </button>
           </div>
         </div>

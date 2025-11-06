@@ -30,64 +30,89 @@ const handleProductClick = () => {
 
 <template>
   <div
-    class="relative bg-white border border-slate-100 rounded-3xl p-8 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+    class="card relative group overflow-hidden transform transition-all duration-500 hover:-translate-y-1 flex flex-col h-full"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <div v-if="onClickRemove" class="absolute top-3 left-3 z-10">
+    <!-- Badge для избранного/удаления -->
+    <div v-if="onClickRemove" class="absolute top-4 right-4 z-30">
       <button
         @click.stop="onClickRemove"
-        class="p-2 bg-white rounded-full border border-slate-200 shadow-sm hover:bg-red-50 hover:border-red-200 transition-all duration-300"
+        class="p-2.5 bg-white/95 backdrop-blur-sm rounded-full border-2 border-red-200 shadow-xl hover:bg-red-50 hover:border-red-400 transition-all duration-300 transform hover:scale-110 active:scale-95"
       >
         <img src="/trash.svg" alt="Remove" class="w-5 h-5 opacity-80 hover:opacity-100" />
       </button>
     </div>
 
-    <img
+    <button
       v-if="onClickFavorite"
-      :src="isFavorite ? '/like-2.svg' : '/like-1.svg'"
-      class="absolute top-4 left-4 hover:scale-110 transition z-10"
       @click.stop="onClickFavorite"
-      alt="Favorite"
-    />
+      class="absolute top-4 left-4 z-30 p-2.5 bg-white/95 backdrop-blur-sm rounded-full shadow-xl hover:scale-110 transition-all duration-300 transform active:scale-95"
+      :class="isFavorite ? 'bg-cookie-100/95 border-2 border-cookie-400' : 'border-2 border-beige-300 hover:border-cookie-400'"
+    >
+      <img
+        :src="isFavorite ? '/like-2.svg' : '/like-1.svg'"
+        class="w-6 h-6"
+        alt="Favorite"
+      />
+    </button>
 
-    <div class="relative overflow-hidden rounded-lg mb-4 h-48" @click="handleProductClick">
+    <!-- Изображение товара - крупное, как в Crumbl -->
+    <div 
+      class="relative overflow-hidden bg-white h-80 flex-shrink-0 flex items-center justify-center transition-all duration-500" 
+      @click="handleProductClick"
+    >
       <img 
         :src="imageUrl" 
         :alt="title"
-        class="w-full h-full object-contain transition-transform duration-300"
-        :class="{'scale-105': isHovered}"
+        class="w-full h-full object-contain transition-transform duration-700 p-8"
+        :class="{'scale-105': isHovered, 'scale-100': !isHovered}"
       />
-
-      <div
-        class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 transition-all duration-300"
-        :class="{'bg-opacity-20': isHovered}"
-      >
-        <button
-          v-show="isHovered"
-          class="bg-white text-lime-600 px-4 py-2 rounded-full font-medium shadow-lg transform transition-all duration-300 hover:scale-105"
-          @click.stop="handleProductClick"
-        >
-          Подробнее →
-        </button>
-      </div>
     </div>
 
-    <p class="mt-2 font-medium text-lg">{{ title }}</p>
+    <!-- Информационный блок в стиле Crumbl - коричневый фон с белым текстом -->
+    <div class="bg-gradient-to-br from-brown-700 via-brown-600 to-brown-800 p-6 md:p-8 text-white flex-1 flex flex-col">
+      <!-- Название продукта -->
+      <h3 class="font-black text-2xl md:text-2xl lg:text-3xl mb-4 leading-tight flex-grow">
+        {{ title }}
+      </h3>
 
-    <div class="flex justify-between mt-3 items-center">
-      <div class="flex flex-col">
-        <span class="text-slate-400 text-sm">Цена:</span>
-        <b class="text-lg">{{ price }} бун.</b>
+      <!-- Цена -->
+      <div class="mb-5">
+        <div class="flex items-baseline gap-2">
+          <span class="text-white/80 text-sm md:text-base font-semibold">Цена:</span>
+          <span class="text-3xl md:text-4xl font-black text-white">{{ price }}</span>
+          <span class="text-white/80 text-lg md:text-xl font-bold">бун</span>
+        </div>
       </div>
 
-      <img
-        v-if="onClickAdd"
-        @click.stop="onClickAdd"
-        :src="!isAdded ? '/plus.svg' : '/checked.svg'"
-        alt="Add to cart"
-        class="w-8 h-8 hover:scale-110 transition cursor-pointer"
-      />
+      <!-- Кнопки действий -->
+      <div class="flex flex-col sm:flex-row gap-3 mt-auto">
+        <button
+          @click.stop="handleProductClick"
+          class="flex-1 px-6 py-3 bg-white text-brown-700 rounded-lg font-bold text-sm hover:bg-brown-50 transition-all duration-300 transform hover:scale-105 active:scale-95 border-2 border-transparent hover:border-brown-300"
+        >
+          Подробнее
+        </button>
+        <button
+          v-if="onClickAdd"
+          @click.stop="onClickAdd"
+          class="flex-1 px-6 py-3 rounded-lg font-bold text-sm transition-all duration-300 transform hover:scale-105 active:scale-95"
+          :class="isAdded 
+            ? 'bg-green-500 hover:bg-green-600 text-white' 
+            : 'bg-white text-brown-700 hover:bg-brown-50 border-2 border-transparent hover:border-brown-300'"
+        >
+          <span class="flex items-center justify-center gap-2">
+            <img
+              :src="!isAdded ? '/plus.svg' : '/checked.svg'"
+              alt="Add to cart"
+              class="w-5 h-5"
+              :class="isAdded ? 'filter brightness-0 invert' : ''"
+            />
+            {{ isAdded ? 'В корзине' : 'Заказать' }}
+          </span>
+        </button>
+      </div>
     </div>
   </div>
 </template>

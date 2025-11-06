@@ -11,17 +11,19 @@
         <transition name="modal-content">
           <div 
             key="order-modal-content"
-            class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-beige-200"
             @click.stop
           >
-          <div class="p-6">
-            <div class="flex justify-between items-center mb-6">
-              <h3 class="text-2xl font-bold text-gray-800">Оформление заказа</h3>
+          <div class="p-8">
+            <div class="flex justify-between items-center mb-8 pb-6 border-b-2 border-beige-200">
+              <h3 class="text-3xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+                Оформление заказа
+              </h3>
               <button 
                 @click="handleClose"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
+                class="p-2 rounded-full hover:bg-cookie-100 transition-all duration-300 transform hover:scale-110 active:scale-95"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-brown-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
@@ -30,14 +32,14 @@
             <form @submit.prevent="handleSubmit" class="space-y-6">
               <!-- Получатель (обязательно) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-semibold text-brown-700 mb-2">
                   Получатель <span class="text-red-500">*</span>
                 </label>
                 <input 
                   v-model="form.recipient"
                   type="text"
                   required
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="input-field"
                   placeholder="Имя получателя"
                 />
                 <p v-if="errors.recipient" class="text-red-500 text-sm mt-1">{{ errors.recipient }}</p>
@@ -45,23 +47,28 @@
 
               <!-- Адрес (обязательно) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-semibold text-brown-700 mb-2">
                   Адрес доставки <span class="text-red-500">*</span>
                 </label>
-                <div class="space-y-2">
+                <div class="space-y-3">
                   <input 
                     v-model="form.address"
                     type="text"
                     required
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    class="input-field"
                     placeholder="Введите адрес доставки"
                   />
                   <button
                     type="button"
                     @click="openMapModal"
-                    class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    class="btn-secondary w-full"
                   >
-                    Выбрать на карте (опционально)
+                    <span class="flex items-center justify-center gap-2">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      Выбрать на карте (опционально)
+                    </span>
                   </button>
                 </div>
                 <p v-if="errors.address" class="text-red-500 text-sm mt-1">{{ errors.address }}</p>
@@ -69,32 +76,32 @@
 
               <!-- Комментарий (опционально) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Комментарий к заказу <span class="text-gray-400 text-xs">(необязательно)</span>
+                <label class="block text-sm font-semibold text-brown-700 mb-2">
+                  Комментарий к заказу <span class="text-brown-400 text-xs">(необязательно)</span>
                 </label>
                 <textarea 
                   v-model="form.comment"
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 h-24"
+                  class="input-field h-24 resize-none"
                   placeholder="Оставьте комментарий, если нужно..."
                 ></textarea>
               </div>
 
               <!-- Промокод (опционально) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Промокод <span class="text-gray-400 text-xs">(необязательно)</span>
+                <label class="block text-sm font-semibold text-brown-700 mb-2">
+                  Промокод <span class="text-brown-400 text-xs">(необязательно)</span>
                 </label>
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                   <input 
                     v-model="form.promoCode"
                     type="text"
-                    class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    class="input-field flex-1"
                     placeholder="Введите промокод"
                   />
                   <button
                     type="button"
                     @click="applyPromoCode"
-                    class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                    class="btn-secondary whitespace-nowrap"
                   >
                     Применить
                   </button>
@@ -104,39 +111,48 @@
 
               <!-- Способ оплаты -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-semibold text-brown-700 mb-3">
                   Способ оплаты <span class="text-red-500">*</span>
                 </label>
-                <div class="space-y-2">
-                  <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <div class="space-y-3">
+                  <label class="flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-300"
+                    :class="form.paymentMethod === 'CASH' 
+                      ? 'border-cookie-500 bg-cookie-50 shadow-md' 
+                      : 'border-beige-300 hover:border-cookie-300 hover:bg-cookie-50/50'">
                     <input 
                       v-model="form.paymentMethod"
                       type="radio"
                       value="CASH"
                       required
-                      class="mr-3"
+                      class="mr-3 w-5 h-5 text-cookie-600 focus:ring-cookie-500"
                     />
-                    <span>Наличными</span>
+                    <span class="font-medium text-brown-800">Наличными</span>
                   </label>
-                  <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label class="flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-300"
+                    :class="form.paymentMethod === 'CARD_ONLINE' 
+                      ? 'border-cookie-500 bg-cookie-50 shadow-md' 
+                      : 'border-beige-300 hover:border-cookie-300 hover:bg-cookie-50/50'">
                     <input 
                       v-model="form.paymentMethod"
                       type="radio"
                       value="CARD_ONLINE"
                       required
-                      class="mr-3"
+                      class="mr-3 w-5 h-5 text-cookie-600 focus:ring-cookie-500"
                     />
-                    <span>Картой сразу</span>
+                    <span class="font-medium text-brown-800">Картой сразу</span>
                   </label>
-                  <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <label class="flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-300"
+                    :class="form.paymentMethod === 'CARD_ON_DELIVERY' 
+                      ? 'border-cookie-500 bg-cookie-50 shadow-md' 
+                      : 'border-beige-300 hover:border-cookie-300 hover:bg-cookie-50/50'">
                     <input 
                       v-model="form.paymentMethod"
                       type="radio"
                       value="CARD_ON_DELIVERY"
                       required
-                      class="mr-3"
+                      class="mr-3 w-5 h-5 text-cookie-600 focus:ring-cookie-500"
                     />
-                    <span>Картой при получении</span>
+                    <span class="font-medium text-brown-800">Картой при получении</span>
                   </label>
                 </div>
                 <p v-if="errors.paymentMethod" class="text-red-500 text-sm mt-1">{{ errors.paymentMethod }}</p>
@@ -144,8 +160,8 @@
 
               <!-- Чаевые (только для оплаты картой) -->
               <div v-if="showTipOptions">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Чаевые доставщику <span class="text-gray-400 text-xs">(необязательно)</span>
+                <label class="block text-sm font-semibold text-brown-700 mb-3">
+                  Чаевые доставщику <span class="text-brown-400 text-xs">(необязательно)</span>
                 </label>
                 <div class="grid grid-cols-5 gap-2">
                   <button
@@ -154,10 +170,10 @@
                     type="button"
                     @click="form.tip = tip.value"
                     :class="[
-                      'px-4 py-2 rounded-lg border transition-colors',
+                      'px-4 py-2 rounded-xl border-2 font-semibold transition-all duration-300 transform hover:scale-105',
                       form.tip === tip.value 
-                        ? 'bg-indigo-500 text-white border-indigo-500' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        ? 'bg-gradient-to-r from-cookie-500 to-cookie-600 text-white border-cookie-500 shadow-lg' 
+                        : 'bg-white text-brown-700 border-beige-300 hover:border-cookie-300 hover:bg-cookie-50'
                     ]"
                   >
                     {{ tip.label }}
@@ -169,42 +185,51 @@
               </div>
 
               <!-- Итого -->
-              <div class="border-t pt-4">
-                <div class="space-y-2">
-                  <div class="flex justify-between text-gray-600">
-                    <span>Товары:</span>
-                    <span>{{ totalPrice }} бун</span>
+              <div class="border-t-2 border-beige-200 pt-6 bg-gradient-to-br from-cookie-50 to-beige-50 rounded-xl p-6">
+                <div class="space-y-3">
+                  <div class="flex justify-between text-brown-700">
+                    <span class="font-medium">Товары:</span>
+                    <span class="font-semibold">{{ totalPrice }} бун</span>
                   </div>
                   <div v-if="discount > 0" class="flex justify-between text-green-600">
-                    <span>Скидка:</span>
-                    <span>-{{ discount }} бун</span>
+                    <span class="font-medium">Скидка:</span>
+                    <span class="font-bold">-{{ discount }} бун</span>
                   </div>
-                  <div v-if="form.tip > 0 && showTipOptions" class="flex justify-between text-gray-600">
-                    <span>Чаевые:</span>
-                    <span>{{ calculateTip }} бун</span>
+                  <div v-if="form.tip > 0 && showTipOptions" class="flex justify-between text-brown-700">
+                    <span class="font-medium">Чаевые:</span>
+                    <span class="font-semibold">{{ calculateTip }} бун</span>
                   </div>
-                  <div class="flex justify-between font-bold text-lg pt-2 border-t">
-                    <span>Итого:</span>
-                    <span>{{ finalTotal }} бун</span>
+                  <div class="flex justify-between items-center pt-4 border-t-2 border-cookie-200">
+                    <span class="text-xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+                      Итого:
+                    </span>
+                    <span class="text-2xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+                      {{ finalTotal }} бун
+                    </span>
                   </div>
                 </div>
               </div>
 
               <!-- Кнопки -->
-              <div class="flex gap-4 pt-4">
+              <div class="flex gap-4 pt-6">
                 <button
                   type="button"
                   @click="handleClose"
-                  class="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  class="btn-secondary flex-1"
                 >
                   Отмена
                 </button>
                 <button
                   type="submit"
                   :disabled="isSubmitting || !isFormValid"
-                  class="flex-1 px-6 py-3 bg-lime-500 text-white rounded-lg hover:bg-lime-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+                  class="btn-primary flex-1"
                 >
-                  <span v-if="!isSubmitting">Оформить заказ</span>
+                  <span v-if="!isSubmitting" class="flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Оформить заказ
+                  </span>
                   <span v-else class="flex items-center justify-center gap-2">
                     <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -228,15 +253,17 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4"
         @click.self="closeMapModal"
       >
-        <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+        <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl border-2 border-beige-200">
           <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-xl font-bold text-gray-800">Выберите адрес на карте</h3>
+            <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-beige-200">
+              <h3 class="text-2xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
+                Выберите адрес на карте
+              </h3>
               <button 
                 @click="closeMapModal"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
+                class="p-2 rounded-full hover:bg-cookie-100 transition-all duration-300 transform hover:scale-110 active:scale-95"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-brown-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
@@ -246,7 +273,7 @@
               <input
                 v-model="mapSearchQuery"
                 type="text"
-                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                class="input-field"
                 placeholder="Поиск адреса..."
                 @input="searchAddress"
               />
@@ -257,14 +284,14 @@
             <div class="mt-4 flex gap-4">
               <button
                 @click="closeMapModal"
-                class="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                class="btn-secondary flex-1"
               >
                 Отмена
               </button>
               <button
                 @click="confirmAddress"
                 :disabled="!selectedAddress"
-                class="flex-1 px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                class="btn-primary flex-1"
               >
                 Выбрать адрес
               </button>

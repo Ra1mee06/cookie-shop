@@ -37,6 +37,9 @@ public class PromoCode extends BaseEntity {
     @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata; // optional extra data (e.g., gift certificate target)
 
+    @Column(name = "description")
+    private String description;
+
     public enum PromoType {
         ORDER_PERCENT,
         PRODUCT_PERCENT,
@@ -62,6 +65,8 @@ public class PromoCode extends BaseEntity {
     public void setActive(boolean active) { this.active = active; }
     public String getMetadata() { return metadata; }
     public void setMetadata(String metadata) { this.metadata = metadata; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }
 
 

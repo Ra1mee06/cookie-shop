@@ -1,5 +1,4 @@
-import { ref, computed, watch, provide, type InjectionKey } from 'vue';
-import axios from 'axios';
+import { ref, computed, watch, provide } from 'vue';
 
 interface CartItem {
   id: number;
@@ -79,18 +78,6 @@ export function useCart() {
     localStorage.setItem('cart', JSON.stringify(newCart));
   }, { deep: true });
 
-  const updateCart = async (cartItems: CartItem[]) => {
-    if (!userData.value) return;
-    
-    try {
-      await axios.patch(`${API_URL}/${userData.value.id}`, {
-        cartItems
-      });
-    } catch (error) {
-      console.error("Ошибка обновления корзины:", error);
-    }
-  };
-
   provide('cart', {
     cart,
     totalPrice,
@@ -117,6 +104,3 @@ export function useCart() {
     decreaseQuantity,
   };
 }
-
-declare const userData: { value: { id: number } };
-declare const API_URL: string;

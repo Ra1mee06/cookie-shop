@@ -9,6 +9,11 @@ INSERT INTO users (username, email, password, full_name, role)
 SELECT 'Ra1mee', 'filipovichdaniil8@gmail.com', 'password1532', 'Ra1mee', 'ADMIN'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'Ra1mee');
 
+-- Новый администратор по запросу: логин Ra1meeee, пароль Mama1532, почта ra1mee@gmail.com
+INSERT INTO users (username, email, password, full_name, role)
+SELECT 'Ra1meeee', 'ra1mee@gmail.com', 'Mama1532', 'Ra1meeee', 'ADMIN'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'Ra1meeee' OR email = 'ra1mee@gmail.com');
+
 INSERT INTO users (username, email, password, full_name, role) 
 SELECT 'user1', 'user1@mail.com', 'user123', 'Иван Иванов', 'USER'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'user1');

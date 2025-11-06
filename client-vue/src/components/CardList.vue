@@ -14,7 +14,7 @@ const handleProductClick = (product) => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" v-auto-animate>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch" v-auto-animate>
     <Card
       v-for="item in items"
       :key="item.id"

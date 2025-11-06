@@ -37,7 +37,7 @@ public class AdminInviteService {
     }
 
     @Transactional
-    public void consumeInviteOrThrow(String code) {
+    public void consumeInviteOrThrow(String code, Long userId) {
         AdminInvite invite = adminInviteRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new IllegalArgumentException("Invite code not found"));
         if (invite.isUsed()) {
@@ -47,6 +47,11 @@ public class AdminInviteService {
             throw new IllegalArgumentException("Invite expired");
         }
         invite.setUsed(true);
+        if (userId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            invite.setUsedBy(user);
+        }
         adminInviteRepository.save(invite);
     }
 }

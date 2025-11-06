@@ -5,6 +5,7 @@ import { useFavorites } from '../composables/useFavorites';
 import { useRouter } from 'vue-router';
 import Header from './Header.vue';
 import Drawer from './Drawer.vue';
+import Footer from './Footer.vue';
 
 const {
   drawerOpen,
@@ -43,20 +44,25 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white w-4/5 m-auto rounded-xl shadow-xl mt-14">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header вынесен наружу для правильной работы sticky -->
     <Header 
       :total-price="totalPrice" 
       @open-drawer="openDrawer" 
-    ></Header>
+    />
     
-    <div class="p-10">
-      <router-view ></router-view>
+    <div class="bg-white w-full max-w-[95%] xl:max-w-[1600px] m-auto rounded-2xl shadow-2xl mt-8 mb-8 overflow-hidden flex-1">
+      <div class="p-6 md:p-8 lg:p-12">
+        <router-view ></router-view>
+      </div>
     </div>
-  </div>
 
-  <Drawer 
-    v-if="drawerOpen" 
-    :total-price="totalPrice" 
-    :vat-price="vatPrice" 
-  />
+    <Footer />
+
+    <Drawer 
+      v-if="drawerOpen" 
+      :total-price="totalPrice" 
+      :vat-price="vatPrice" 
+    />
+  </div>
 </template>
