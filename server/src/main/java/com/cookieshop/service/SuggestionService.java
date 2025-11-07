@@ -50,12 +50,30 @@ public class SuggestionService {
                 .collect(Collectors.toList());
     }
     
+    public List<SuggestionDTO> getAllSuggestions() {
+        List<Suggestion> suggestions = suggestionRepository.findAll();
+        return suggestions.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    public void deleteSuggestion(Long id) {
+        if (!suggestionRepository.existsById(id)) {
+            throw new RuntimeException("Suggestion with id " + id + " not found");
+        }
+        suggestionRepository.deleteById(id);
+    }
+    
     private SuggestionDTO convertToDTO(Suggestion suggestion) {
         SuggestionDTO dto = new SuggestionDTO();
         dto.setId(suggestion.getId());
         
         if (suggestion.getUser() != null) {
-            dto.setUserId(suggestion.getUser().getId());
+            User user = suggestion.getUser();
+            dto.setUserId(user.getId());
+            dto.setUserEmail(user.getEmail());
+            dto.setUserUsername(user.getUsername());
+            dto.setUserFullName(user.getFullName());
         }
         
         dto.setAuthor(suggestion.getAuthor());

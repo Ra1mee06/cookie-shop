@@ -71,7 +71,7 @@ public class AdminOrderController {
             OrderDTO dto = orderService.changeStatus(id, status.trim());
             adminLogger.log(admin, "Changed status of order #" + id + " to " + status);
             return ResponseEntity.ok(dto);
-        } catch (IllegalArgumentException | RuntimeException ex) {
+        } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (Exception ex) {
             return ResponseEntity.status(500).body("Failed to change status: " + ex.getMessage());

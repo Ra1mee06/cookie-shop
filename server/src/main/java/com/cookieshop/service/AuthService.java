@@ -18,9 +18,15 @@ public class AuthService {
     @Autowired
     private AdminInviteService adminInviteService;
     
-    public Map<String, Object> login(String email, String password) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
+    public Map<String, Object> login(String loginOrEmail, String password) {
         Map<String, Object> response = new HashMap<>();
+        
+        // Пытаемся найти пользователя по email или username
+        Optional<User> userOptional = userRepository.findByEmail(loginOrEmail);
+        if (!userOptional.isPresent()) {
+            // Если не нашли по email, пробуем по username
+            userOptional = userRepository.findByUsername(loginOrEmail);
+        }
         
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -31,11 +37,11 @@ public class AuthService {
                 response.put("message", "Login successful");
             } else {
                 response.put("success", false);
-                response.put("message", "Invalid password");
+                response.put("message", "Неверный пароль");
             }
         } else {
             response.put("success", false);
-            response.put("message", "User not found");
+            response.put("message", "Пользователь с таким логином или email не найден");
         }
         
         return response;
@@ -44,35 +50,37 @@ public class AuthService {
     public Map<String, Object> register(String username, String email, String password, String fullName, String adminInviteCode) {
         Map<String, Object> response = new HashMap<>();
         
-        // Генерируем username из email, если он не передан
-        if (username == null || username.trim().isEmpty()) {
-            // Берем часть email до @ символа
-            String emailPrefix = email.split("@")[0];
-            username = emailPrefix;
-            
-            // Проверяем уникальность и добавляем суффикс, если нужно
-            int suffix = 1;
-            String originalUsername = username;
-            while (userRepository.findByUsername(username).isPresent()) {
-                username = originalUsername + suffix;
-                suffix++;
-            }
-        }
-        
-        // Проверяем, существует ли пользователь
+        // Проверяем, существует ли пользователь с таким email
         if (userRepository.findByEmail(email).isPresent()) {
             response.put("success", false);
-            response.put("message", "Email already exists");
+            response.put("message", "Email уже используется. Пожалуйста, используйте другой email.");
             return response;
         }
         
-        // Проверяем уникальность username (для случая, если он был передан вручную)
-        // Если username был автогенерирован, его уникальность уже гарантирована выше
-        if (userRepository.findByUsername(username).isPresent()) {
+        // Логин теперь обязателен при регистрации
+        if (username == null || username.trim().isEmpty()) {
             response.put("success", false);
-            response.put("message", "Username already exists");
+            response.put("message", "Логин обязателен для регистрации");
             return response;
         }
+        
+        String trimmedUsername = username.trim();
+        
+        // Валидация логина: от 3 до 20 символов, только буквы, цифры и подчеркивание
+        if (!trimmedUsername.matches("^[a-zA-Z0-9_]{3,20}$")) {
+            response.put("success", false);
+            response.put("message", "Логин должен содержать от 3 до 20 символов (только буквы, цифры и подчеркивание)");
+            return response;
+        }
+        
+        // Проверяем уникальность логина
+        if (userRepository.findByUsername(trimmedUsername).isPresent()) {
+            response.put("success", false);
+            response.put("message", "Логин уже используется. Пожалуйста, выберите другой логин.");
+            return response;
+        }
+        
+        username = trimmedUsername;
         
         // Создаем нового пользователя
         User user = new User();
@@ -93,8 +101,20 @@ public class AuthService {
                 savedUser.setRole("ADMIN");
                 savedUser = userRepository.save(savedUser);
             } catch (IllegalArgumentException ex) {
-                // leave role as USER; attach message
-                response.put("inviteError", ex.getMessage());
+                // Если код администратора неверный, удаляем созданного пользователя и возвращаем ошибку
+                userRepository.delete(savedUser);
+                response.put("success", false);
+                String errorMessage = ex.getMessage();
+                if (errorMessage.contains("not found")) {
+                    response.put("message", "Код администратора не найден или неверный. Пожалуйста, проверьте введенный код администратора.");
+                } else if (errorMessage.contains("already used")) {
+                    response.put("message", "Код администратора уже использован. Пожалуйста, проверьте введенный код администратора.");
+                } else if (errorMessage.contains("expired")) {
+                    response.put("message", "Код администратора истек. Пожалуйста, проверьте введенный код администратора.");
+                } else {
+                    response.put("message", "Код администратора неверный. Пожалуйста, проверьте введенный код администратора.");
+                }
+                return response;
             }
         }
         

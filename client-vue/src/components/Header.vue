@@ -40,7 +40,7 @@ const emit = defineEmits(['openDrawer']);
         class="flex items-center cursor-pointer gap-2 md:gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-cookie-500 to-cookie-600 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 active:scale-95"
       >
         <img src="/cart.svg" alt="Cart" class="w-5 h-5 md:w-6 md:h-6 filter brightness-0 invert" />
-        <span class="text-sm md:text-base">{{ totalPrice }} бун.</span>
+        <span class="text-sm md:text-base">{{ totalPrice }} BYN</span>
       </button>
 
       <router-link 

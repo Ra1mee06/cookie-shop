@@ -51,7 +51,7 @@ onMounted(async () => {
         <h1 class="text-4xl font-bold text-gray-800">{{ product.title }}</h1>
         
         <div class="flex items-center gap-4">
-          <span class="text-3xl font-semibold text-lime-600">{{ product.price }} бун</span>
+          <span class="text-3xl font-semibold text-lime-600">{{ product.price }} BYN</span>
           <span class="text-sm text-gray-500">{{ product.calories }}</span>
         </div>
         

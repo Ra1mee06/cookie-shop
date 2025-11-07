@@ -75,11 +75,28 @@ public class OrderService {
             PromoCode promoEntityForOrder = null;
             if (orderData.containsKey("promoCode") && orderData.get("promoCode") != null) {
                 promoCode = orderData.get("promoCode").toString().trim().toUpperCase();
-                // If discount is not provided explicitly, derive from promo definition
-                if (!orderData.containsKey("discount")) {
+                if (promoCode.isEmpty()) {
+                    promoCode = null;
+                } else {
+                    // Проверяем валидность промокода
                     PromoCode promo = promoCodeRepository.findByCodeIgnoreCase(promoCode).orElse(null);
-                    int used = (promo != null && promo.getUsedCount() != null) ? promo.getUsedCount() : 0;
-                    if (promo != null && promo.isActive() && (promo.getExpiresAt() == null || !promo.getExpiresAt().isBefore(java.time.OffsetDateTime.now())) && (promo.getMaxUses() == null || used < promo.getMaxUses())) {
+                    if (promo == null) {
+                        throw new RuntimeException("Промокод не найден или неверный. Пожалуйста, проверьте введенный промокод.");
+                    }
+                    
+                    int used = (promo.getUsedCount() != null) ? promo.getUsedCount() : 0;
+                    if (!promo.isActive()) {
+                        throw new RuntimeException("Промокод неактивен. Пожалуйста, проверьте введенный промокод.");
+                    }
+                    if (promo.getExpiresAt() != null && promo.getExpiresAt().isBefore(java.time.OffsetDateTime.now())) {
+                        throw new RuntimeException("Промокод истек. Пожалуйста, проверьте введенный промокод.");
+                    }
+                    if (promo.getMaxUses() != null && used >= promo.getMaxUses()) {
+                        throw new RuntimeException("Промокод больше не может быть использован. Пожалуйста, проверьте введенный промокод.");
+                    }
+                    
+                    // If discount is not provided explicitly, derive from promo definition
+                    if (!orderData.containsKey("discount")) {
                         promoEntityForOrder = promo;
                         switch (promo.getType()) {
                             case ORDER_PERCENT:
@@ -97,18 +114,22 @@ public class OrderService {
                                 break;
                             case PRODUCT_PERCENT:
                                 // handled during items processing; leave discount 0 here
+                                promoEntityForOrder = promo;
                                 break;
                             case BUY2GET1:
                                 // handled during items processing by applyBuy2Get1 flag
+                                promoEntityForOrder = promo;
                                 break;
                         }
-                    }
-                } else {
-                    Object discountObj = orderData.get("discount");
-                    if (discountObj instanceof Number) {
-                        discount = BigDecimal.valueOf(((Number) discountObj).doubleValue());
-                    } else if (discountObj != null) {
-                        discount = new BigDecimal(discountObj.toString());
+                    } else {
+                        // Если discount предоставлен, все равно проверяем, что промокод валиден
+                        promoEntityForOrder = promo;
+                        Object discountObj = orderData.get("discount");
+                        if (discountObj instanceof Number) {
+                            discount = BigDecimal.valueOf(((Number) discountObj).doubleValue());
+                        } else if (discountObj != null) {
+                            discount = new BigDecimal(discountObj.toString());
+                        }
                     }
                 }
             }
@@ -367,7 +388,11 @@ public class OrderService {
         dto.setId(order.getId());
         
         if (order.getUser() != null) {
-            dto.setUserId(order.getUser().getId());
+            User user = order.getUser();
+            dto.setUserId(user.getId());
+            dto.setUserEmail(user.getEmail());
+            dto.setUserUsername(user.getUsername());
+            dto.setUserFullName(user.getFullName());
         }
         
         dto.setTotalPrice(order.getTotalPrice());

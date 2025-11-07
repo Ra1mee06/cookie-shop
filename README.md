@@ -42,7 +42,7 @@ cd server
 mvn spring-boot:run
 ```
 
-Сервер запустится на `http://localhost:8080`
+Сервер запустится на `http://localhost:8081`
 
 ### Запуск фронтенда (Vue.js)
 

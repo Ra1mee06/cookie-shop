@@ -304,7 +304,7 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <div class="text-3xl font-extrabold text-green-800">{{ Math.round(metrics.sum) }} бун</div>
+        <div class="text-3xl font-extrabold text-green-800">{{ Math.round(metrics.sum) }} BYN</div>
       </div>
       <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
         <div class="flex items-center justify-between mb-2">
@@ -326,21 +326,21 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
       </div>
     </div>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <div class="p-6 bg-white rounded-2xl shadow-lg border-2 border-beige-200">
-      <div class="text-lg font-bold text-brown-800 mb-4 flex items-center gap-2">
+    <div class="p-6 bg-white rounded-2xl shadow-lg border-2 border-beige-200 overflow-hidden">
+      <div class="text-lg font-bold text-brown-800 mb-6 flex items-center gap-2 relative z-10">
         <svg class="w-6 h-6 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
         Распределение по статусам
       </div>
-      <div class="flex items-end gap-3 h-48 px-2">
-        <div v-for="(v,k) in metrics.byStatus" :key="k" class="flex-1 text-center group">
+      <div class="flex items-end gap-3 h-52 px-2 relative" style="min-height: 208px;">
+        <div v-for="(v,k) in metrics.byStatus" :key="k" class="flex-1 text-center group flex flex-col justify-end">
           <div 
-            class="bg-gradient-to-t from-cookie-500 to-cookie-600 w-full rounded-t-xl transition-all duration-300 group-hover:from-cookie-600 group-hover:to-cookie-700 shadow-md cursor-pointer" 
-            :style="{ height: Math.max(12, (v / Math.max(1, ...Object.values(metrics.byStatus))) * 180) + 'px' }"
+            class="bg-gradient-to-t from-cookie-500 to-cookie-600 w-full rounded-t-xl transition-all duration-300 group-hover:from-cookie-600 group-hover:to-cookie-700 shadow-md cursor-pointer mb-2" 
+            :style="{ height: Math.max(12, Math.min(180, (v / Math.max(1, ...Object.values(metrics.byStatus))) * 180)) + 'px' }"
             :title="`${k === 'PENDING' ? 'В обработке' : k === 'CONFIRMED' ? 'Подтверждён' : k === 'DELIVERED' ? 'Доставлен' : 'Отменён'}: ${v}`"
           ></div>
-          <div class="text-xs mt-2 font-semibold text-brown-700">{{ k === 'PENDING' ? 'В обработке' : k === 'CONFIRMED' ? 'Подтверждён' : k === 'DELIVERED' ? 'Доставлен' : 'Отменён' }}</div>
+          <div class="text-xs mt-1 font-semibold text-brown-700 whitespace-nowrap">{{ k === 'PENDING' ? 'В обработке' : k === 'CONFIRMED' ? 'Подтверждён' : k === 'DELIVERED' ? 'Доставлен' : 'Отменён' }}</div>
           <div class="text-sm font-bold text-brown-800 mt-1">{{ v }}</div>
         </div>
       </div>
@@ -453,10 +453,19 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
                   </button>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-brown-800">{{ o.userId ?? '—' }}</div>
+                  <div v-if="o.userId" class="text-sm">
+                    <div class="font-medium text-brown-800">{{ o.userFullName || o.userEmail || o.userUsername || `ID: ${o.userId}` }}</div>
+                    <div v-if="o.userEmail || o.userUsername" class="text-xs text-brown-500 mt-1">
+                      <span v-if="o.userEmail">{{ o.userEmail }}</span>
+                      <span v-if="o.userEmail && o.userUsername"> · </span>
+                      <span v-if="o.userUsername">@{{ o.userUsername }}</span>
+                    </div>
+                    <div class="text-xs text-brown-400 mt-1">ID: {{ o.userId }}</div>
+                  </div>
+                  <div v-else class="text-sm text-brown-400">—</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-bold text-brown-800">{{ o.totalPrice }} бун</div>
+                  <div class="text-sm font-bold text-brown-800">{{ o.totalPrice }} BYN</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span 
@@ -590,11 +599,19 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div class="bg-cookie-50 rounded-xl p-4 border-2 border-cookie-200">
           <div class="text-xs font-semibold text-brown-600 uppercase mb-1">Пользователь</div>
-          <div class="text-lg font-bold text-brown-800">{{ details?.userId ?? '—' }}</div>
+          <div v-if="details?.userId" class="text-lg font-bold text-brown-800">
+            {{ details?.userFullName || details?.userEmail || details?.userUsername || `ID: ${details?.userId}` }}
+          </div>
+          <div v-if="details?.userEmail || details?.userUsername" class="text-sm text-brown-600 mt-1">
+            <div v-if="details?.userEmail">{{ details.userEmail }}</div>
+            <div v-if="details?.userUsername">@{{ details.userUsername }}</div>
+          </div>
+          <div v-if="details?.userId" class="text-xs text-brown-400 mt-1">ID: {{ details.userId }}</div>
+          <div v-else class="text-lg font-bold text-brown-400">—</div>
         </div>
         <div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
           <div class="text-xs font-semibold text-green-700 uppercase mb-1">Сумма</div>
-          <div class="text-lg font-bold text-green-800">{{ details?.totalPrice }} бун</div>
+          <div class="text-lg font-bold text-green-800">{{ details?.totalPrice }} BYN</div>
         </div>
         <div class="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
           <div class="text-xs font-semibold text-blue-700 uppercase mb-1">Статус</div>
@@ -610,11 +627,11 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
         </div>
         <div class="bg-pink-50 rounded-xl p-4 border-2 border-pink-200">
           <div class="text-xs font-semibold text-pink-700 uppercase mb-1">Чаевые</div>
-          <div class="text-lg font-bold text-pink-800">{{ details?.tip || 0 }} бун</div>
+          <div class="text-lg font-bold text-pink-800">{{ details?.tip || 0 }} BYN</div>
         </div>
         <div class="bg-orange-50 rounded-xl p-4 border-2 border-orange-200">
           <div class="text-xs font-semibold text-orange-700 uppercase mb-1">Скидка</div>
-          <div class="text-lg font-bold text-orange-800">{{ details?.discount || 0 }} бун</div>
+          <div class="text-lg font-bold text-orange-800">{{ details?.discount || 0 }} BYN</div>
         </div>
         <div class="bg-indigo-50 rounded-xl p-4 border-2 border-indigo-200">
           <div class="text-xs font-semibold text-indigo-700 uppercase mb-1">Дата создания</div>
@@ -666,7 +683,7 @@ const closeDetails = () => { showDetails.value = false; details.value = null }
                   </span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <div class="text-sm font-bold text-brown-800">{{ it.price }} бун</div>
+                  <div class="text-sm font-bold text-brown-800">{{ it.price }} BYN</div>
                 </td>
               </tr>
             </tbody>

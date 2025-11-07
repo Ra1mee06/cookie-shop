@@ -27,10 +27,11 @@ const showLoginForm = ref(true);
 const isLoading = ref(false);
 const errorMessage = ref('');
 
-const loginEmail = ref('');
+const loginOrEmail = ref('');
 const loginPassword = ref('');
 const registerName = ref('');
 const registerEmail = ref('');
+const registerUsername = ref('');
 const registerPassword = ref('');
 const adminInviteCode = ref('');
 
@@ -303,7 +304,7 @@ const userInitials = computed(() => {
 const avatarUrl = computed(() => {
   if (userData.value.avatarUrl) {
     if (userData.value.avatarUrl.startsWith('/uploads/')) {
-      return `http://localhost:8080${userData.value.avatarUrl}`;
+      return `http://localhost:8081${userData.value.avatarUrl}`;
     }
     return userData.value.avatarUrl;
   }
@@ -323,9 +324,9 @@ const formatDate = (dateString) => {
 };
 
 const formatPrice = (price) => {
-  if (!price) return '0 бун';
+  if (!price) return '0 BYN';
   const numPrice = typeof price === 'number' ? price : parseFloat(price);
-  return `${Math.round(numPrice)} бун`;
+  return `${Math.round(numPrice)} BYN`;
 };
 
 const getPaymentMethodText = (method) => {
@@ -404,6 +405,18 @@ const handleRegister = async () => {
     return;
   }
 
+  if (!registerUsername.value.trim()) {
+    errorMessage.value = 'Введите логин';
+    return;
+  }
+
+  // Валидация логина: только буквы, цифры и подчеркивания, минимум 3 символа
+  const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
+  if (!usernamePattern.test(registerUsername.value.trim())) {
+    errorMessage.value = 'Логин должен содержать от 3 до 20 символов (только буквы, цифры и подчеркивание)';
+    return;
+  }
+
   if (registerPassword.value.length < 6) {
     errorMessage.value = 'Пароль должен содержать минимум 6 символов';
     return;
@@ -415,6 +428,7 @@ const handleRegister = async () => {
     const response = await authApi.register({
       fullName: registerName.value.trim(),
       email: registerEmail.value.toLowerCase().trim(),
+      username: registerUsername.value.trim(),
       password: registerPassword.value,
       adminInviteCode: adminInviteCode.value || undefined
     });
@@ -437,6 +451,7 @@ const handleRegister = async () => {
     
     registerName.value = '';
     registerEmail.value = '';
+    registerUsername.value = '';
     registerPassword.value = '';
     adminInviteCode.value = '';
     
@@ -453,7 +468,13 @@ const handleRegister = async () => {
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
     
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Ошибка регистрации. Попробуйте позже.';
+    // Проверяем, есть ли конкретная ошибка от сервера
+    const serverMessage = error.response?.data?.message;
+    if (serverMessage) {
+      errorMessage.value = serverMessage;
+    } else {
+      errorMessage.value = 'Ошибка регистрации. Попробуйте позже.';
+    }
     console.error('Registration error:', error);
   } finally {
     isLoading.value = false;
@@ -463,8 +484,13 @@ const handleRegister = async () => {
 const handleLogin = async () => {
   errorMessage.value = '';
   
-  if (!isValidEmail(loginEmail.value)) {
-    errorMessage.value = 'Введите корректный email';
+  if (!loginOrEmail.value.trim()) {
+    errorMessage.value = 'Введите логин или email';
+    return;
+  }
+
+  if (!loginPassword.value) {
+    errorMessage.value = 'Введите пароль';
     return;
   }
 
@@ -472,7 +498,7 @@ const handleLogin = async () => {
 
   try {
     const response = await authApi.login({
-      email: loginEmail.value.toLowerCase().trim(),
+      loginOrEmail: loginOrEmail.value.trim(),
       password: loginPassword.value
     });
 
@@ -492,7 +518,7 @@ const handleLogin = async () => {
       localStorage.setItem('userId', data.user.id.toString());
     }
     
-    loginEmail.value = '';
+    loginOrEmail.value = '';
     loginPassword.value = '';
     
     // Синхронизируем локальное избранное с сервером после входа
@@ -508,7 +534,7 @@ const handleLogin = async () => {
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
     
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Неверный email или пароль';
+    errorMessage.value = error.response?.data?.message || 'Неверный логин/email или пароль';
     console.error('Login error:', error);
   } finally {
     isLoading.value = false;
@@ -587,12 +613,12 @@ onMounted(checkAuth);
         <h3 class="text-xl font-semibold text-center">Вход в аккаунт</h3>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Логин или Email</label>
           <input 
-            type="email" 
-            v-model="loginEmail"
+            type="text" 
+            v-model="loginOrEmail"
             class="input-field"
-            placeholder="Ваш email"
+            placeholder="Введите логин или email"
             @keyup.enter="handleLogin"
           >
         </div>
@@ -649,6 +675,20 @@ onMounted(checkAuth);
             v-model="registerEmail"
             class="input-field"
             placeholder="Ваш email"
+            @keyup.enter="handleRegister"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Логин <span class="text-red-500">*</span>
+            <span class="text-xs text-gray-500 font-normal">(от 3 до 20 символов, только буквы, цифры и подчеркивание)</span>
+          </label>
+          <input 
+            type="text" 
+            v-model="registerUsername"
+            class="input-field"
+            placeholder="Придумайте логин"
             @keyup.enter="handleRegister"
           >
         </div>

@@ -25,10 +25,17 @@ public class AuthController {
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String email = credentials.get("email");
+        String loginOrEmail = credentials.get("loginOrEmail") != null ? credentials.get("loginOrEmail") : credentials.get("email");
         String password = credentials.get("password");
         
-        Map<String, Object> result = authService.login(email, password);
+        if (loginOrEmail == null || loginOrEmail.trim().isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Введите логин или email");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        Map<String, Object> result = authService.login(loginOrEmail.trim(), password);
         
         if ((Boolean) result.get("success")) {
             return ResponseEntity.ok(result);
@@ -49,19 +56,25 @@ public class AuthController {
             if (email == null || email.trim().isEmpty()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "Email is required");
+                response.put("message", "Email обязателен");
+                return ResponseEntity.badRequest().body(response);
+            }
+            if (username == null || username.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Логин обязателен");
                 return ResponseEntity.badRequest().body(response);
             }
             if (password == null || password.trim().isEmpty()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "Password is required");
+                response.put("message", "Пароль обязателен");
                 return ResponseEntity.badRequest().body(response);
             }
             if (fullName == null || fullName.trim().isEmpty()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
-                response.put("message", "Full name is required");
+                response.put("message", "Имя обязательно");
                 return ResponseEntity.badRequest().body(response);
             }
             

@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 public class SuggestionDTO {
     private Long id;
     private Long userId;
+    private String userEmail;
+    private String userUsername;
+    private String userFullName;
     private String author;
     private String productName;
     private String description;
@@ -79,6 +82,30 @@ public class SuggestionDTO {
     
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+    
+    public String getUserEmail() {
+        return userEmail;
+    }
+    
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+    
+    public String getUserUsername() {
+        return userUsername;
+    }
+    
+    public void setUserUsername(String userUsername) {
+        this.userUsername = userUsername;
+    }
+    
+    public String getUserFullName() {
+        return userFullName;
+    }
+    
+    public void setUserFullName(String userFullName) {
+        this.userFullName = userFullName;
     }
 }
 

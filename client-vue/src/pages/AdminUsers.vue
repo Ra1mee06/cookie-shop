@@ -249,6 +249,7 @@ onMounted(load)
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="font-bold text-lg text-brown-800 mb-1">
+                <span class="text-xs font-normal text-brown-400 mr-2">ID: {{ u.id }}</span>
                 {{ u.fullName }} 
                 <span class="text-sm font-normal text-brown-500">({{ u.username }})</span>
               </div>
@@ -377,7 +378,7 @@ onMounted(load)
           <div class="flex justify-between items-center">
             <div>
               <div class="text-sm font-semibold text-brown-600">Заказ #{{ o.id }}</div>
-              <div class="text-lg font-bold text-brown-800 mt-1">{{ o.totalPrice }} бун</div>
+              <div class="text-lg font-bold text-brown-800 mt-1">{{ o.totalPrice }} BYN</div>
             </div>
             <span 
               class="px-3 py-1 rounded-full text-xs font-semibold"

@@ -82,7 +82,7 @@ const handleProductClick = () => {
         <div class="flex items-baseline gap-2">
           <span class="text-white/80 text-sm md:text-base font-semibold">Цена:</span>
           <span class="text-3xl md:text-4xl font-black text-white">{{ price }}</span>
-          <span class="text-white/80 text-lg md:text-xl font-bold">бун</span>
+          <span class="text-white/80 text-lg md:text-xl font-bold">BYN</span>
         </div>
       </div>
 

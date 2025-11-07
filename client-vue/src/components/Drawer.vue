@@ -42,10 +42,13 @@ const closeOrderModal = () => {
   showOrderModal.value = false
 }
 
+const orderError = ref('')
+
 const handleOrderSubmit = async (orderFormData) => {
   try {
     isCreating.value = true
-    showOrderModal.value = false
+    orderError.value = ''
+    // Не закрываем модальное окно сразу, чтобы показать ошибку, если она будет
     
     const orderData = {
       items: cart.value.map(item => ({
@@ -58,14 +61,29 @@ const handleOrderSubmit = async (orderFormData) => {
     }
     
     const response = await ordersApi.create(orderData)
+    // Если заказ успешно создан, закрываем модальное окно и очищаем корзину
     cart.value = []
     orderId.value = response.data.id
+    orderError.value = ''
+    showOrderModal.value = false
   } catch (err) {
     console.error("Ошибка создания заказа:", err)
     if (err.response?.status === 401 || err.response?.status === 403) {
+      showOrderModal.value = false
       showAuthModal.value = true
+      orderError.value = ''
     } else {
-      alert('Ошибка при создании заказа. Попробуйте позже.')
+      // Показываем конкретную ошибку от сервера, если она есть
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Ошибка при создании заказа. Попробуйте позже.'
+      // Убираем префикс "Error creating order: " если он есть, чтобы сообщение было чище
+      const cleanErrorMessage = errorMessage.replace(/^Error creating order:\s*/i, '')
+      orderError.value = cleanErrorMessage
+      // Оставляем модальное окно открытым, чтобы пользователь мог увидеть ошибку и исправить промокод
+      showOrderModal.value = true
+      // Для ошибок не связанных с промокодом, показываем alert
+      if (!cleanErrorMessage.includes('промокод') && !cleanErrorMessage.includes('Промокод')) {
+        alert(cleanErrorMessage)
+      }
     }
   } finally {
     isCreating.value = false
@@ -94,7 +112,7 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
       class="fixed inset-0 bg-black bg-opacity-40 z-40"
     ></div>
     
-    <div class="bg-white w-full md:w-96 h-full flex flex-col z-50 relative shadow-2xl">
+    <div class="bg-white w-full md:w-[600px] h-full flex flex-col z-50 relative shadow-2xl">
       <DrawerHead />
 
       <div class="flex-1 overflow-y-auto px-6 py-4 bg-gradient-to-b from-white to-beige-50/30">
@@ -124,14 +142,14 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
             <span class="font-medium">Итого:</span>
             <div class="flex-1 border-b-2 border-dashed border-beige-300"></div>
             <b class="text-xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
-              {{ totalPrice }} бун
+              {{ totalPrice }} BYN
             </b>
           </div>
 
           <div class="flex items-center gap-3 text-brown-600">
             <span class="text-sm">Налог 5%:</span>
             <div class="flex-1 border-b border-dashed border-beige-300"></div>
-            <b class="text-sm font-semibold">{{ vatPrice }} бун</b>
+            <b class="text-sm font-semibold">{{ vatPrice }} BYN</b>
           </div>
 
           <button
@@ -193,6 +211,7 @@ const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
   <OrderModal
     :isOpen="showOrderModal"
     :totalPrice="totalPrice"
+    :error="orderError"
     @close="closeOrderModal"
     @submit="handleOrderSubmit"
   />

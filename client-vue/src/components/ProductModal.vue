@@ -73,7 +73,7 @@ const details = computed(() => {
               <p class="text-4xl font-black bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
                 {{ product.price }}
               </p>
-              <span class="text-brown-500 text-xl font-bold">бун</span>
+              <span class="text-brown-500 text-xl font-bold">BYN</span>
             </div>
           </div>
           
@@ -149,7 +149,7 @@ const details = computed(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
   animation: fadeIn 0.3s ease-out;
 }
 

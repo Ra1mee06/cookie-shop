@@ -22,7 +22,7 @@ defineProps({
       <div class="flex justify-between items-center gap-2">
         <div class="flex items-center gap-3">
           <b class="text-lg font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
-            {{ price }} бун
+            {{ price }} BYN
           </b>
           <span v-if="quantity" class="px-2 py-1 bg-cookie-100 text-cookie-700 rounded-lg text-sm font-semibold">
             ×{{ quantity }}

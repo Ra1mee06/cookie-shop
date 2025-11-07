@@ -30,6 +30,11 @@
             </div>
 
             <form @submit.prevent="handleSubmit" class="space-y-6">
+              <!-- Сообщение об ошибке -->
+              <div v-if="props.error" class="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                <p class="text-red-700 font-semibold text-sm">{{ props.error }}</p>
+              </div>
+              
               <!-- Получатель (обязательно) -->
               <div>
                 <label class="block text-sm font-semibold text-brown-700 mb-2">
@@ -106,7 +111,8 @@
                     Применить
                   </button>
                 </div>
-                <p v-if="promoMessage" :class="promoMessage.includes('неверный') ? 'text-red-500' : 'text-green-500'" class="text-sm mt-1">{{ promoMessage }}</p>
+                <!-- Показываем сообщение о промокоде только если нет ошибки в props.error (чтобы не дублировать) -->
+                <p v-if="promoMessage && !props.error" :class="promoMessage.includes('неверный') || promoMessage.includes('не найден') || promoMessage.includes('истек') || promoMessage.includes('неактивен') ? 'text-red-500' : promoMessage.includes('применен') || promoMessage.includes('будет проверен') ? 'text-green-500' : 'text-gray-500'" class="text-sm mt-1">{{ promoMessage }}</p>
               </div>
 
               <!-- Способ оплаты -->
@@ -180,7 +186,7 @@
                   </button>
                 </div>
                 <p v-if="form.tip > 0" class="text-sm text-gray-600 mt-2">
-                  Чаевые: {{ calculateTip }} бун
+                  Чаевые: {{ calculateTip }} BYN
                 </p>
               </div>
 
@@ -189,22 +195,22 @@
                 <div class="space-y-3">
                   <div class="flex justify-between text-brown-700">
                     <span class="font-medium">Товары:</span>
-                    <span class="font-semibold">{{ totalPrice }} бун</span>
+                    <span class="font-semibold">{{ totalPrice }} BYN</span>
                   </div>
                   <div v-if="discount > 0" class="flex justify-between text-green-600">
                     <span class="font-medium">Скидка:</span>
-                    <span class="font-bold">-{{ discount }} бун</span>
+                    <span class="font-bold">-{{ discount }} BYN</span>
                   </div>
                   <div v-if="form.tip > 0 && showTipOptions" class="flex justify-between text-brown-700">
                     <span class="font-medium">Чаевые:</span>
-                    <span class="font-semibold">{{ calculateTip }} бун</span>
+                    <span class="font-semibold">{{ calculateTip }} BYN</span>
                   </div>
                   <div class="flex justify-between items-center pt-4 border-t-2 border-cookie-200">
                     <span class="text-xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
                       Итого:
                     </span>
                     <span class="text-2xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
-                      {{ finalTotal }} бун
+                      {{ finalTotal }} BYN
                     </span>
                   </div>
                 </div>
@@ -314,6 +320,10 @@ const props = defineProps({
   totalPrice: {
     type: Number,
     required: true
+  },
+  error: {
+    type: String,
+    default: ''
   }
 })
 
@@ -367,6 +377,11 @@ const calculateTip = computed(() => {
 })
 
 const finalTotal = computed(() => {
+  // Если промокод указан, но еще не проверен, не применяем скидку
+  // Скидка будет рассчитана на сервере после проверки промокода
+  if (form.value.promoCode && form.value.promoCode.trim() && discount.value === 0) {
+    return props.totalPrice + calculateTip.value
+  }
   return props.totalPrice - discount.value + calculateTip.value
 })
 
@@ -376,31 +391,19 @@ const isFormValid = computed(() => {
          form.value.paymentMethod !== ''
 })
 
-const applyPromoCode = () => {
+const applyPromoCode = async () => {
   const code = form.value.promoCode.trim().toUpperCase()
   if (!code) {
     promoMessage.value = 'Введите промокод'
-    return
-  }
-
-  const promo = promoCodes[code]
-  if (!promo) {
-    promoMessage.value = 'Неверный промокод'
     discount.value = 0
     return
   }
 
-  if (promo.type === 'discount') {
-    discount.value = Math.round((props.totalPrice * promo.value) / 100)
-    promoMessage.value = `Скидка ${promo.value}% применена!`
-  } else if (promo.type === 'bonus' && promo.value === 'buy2get1') {
-    // Логика "2 по цене 1" обрабатывается на сервере при создании заказа
-    // Показываем сообщение пользователю, что промокод применен
-    promoMessage.value = 'Промокод применен: 2 печеньки по цене 1 (скидка будет применена при оформлении)'
-    // Не устанавливаем discount на фронтенде, т.к. расчет зависит от количества каждого товара
-    // и будет сделан на сервере
-    discount.value = 0
-  }
+  // Валидация промокода будет проверяться на сервере при оформлении заказа
+  // Здесь просто сбрасываем сообщение, чтобы пользователь мог ввести промокод
+  // и увидеть ошибку при попытке оформить заказ
+  promoMessage.value = 'Промокод будет проверен при оформлении заказа'
+  discount.value = 0
 }
 
 const openMapModal = () => {
@@ -658,6 +661,9 @@ const resetForm = () => {
 const handleSubmit = async () => {
   // Валидация
   errors.value = {}
+  // Очищаем promoMessage при отправке формы, ошибка будет показана через props.error
+  promoMessage.value = ''
+  
   if (!form.value.recipient.trim()) {
     errors.value.recipient = 'Укажите получателя'
   }
@@ -666,6 +672,13 @@ const handleSubmit = async () => {
   }
   if (!form.value.paymentMethod) {
     errors.value.paymentMethod = 'Выберите способ оплаты'
+  }
+
+  // Если указан промокод, очищаем его перед отправкой, чтобы сервер проверил его
+  // (сервер проверит промокод и вернет ошибку, если он неверный)
+  if (form.value.promoCode && form.value.promoCode.trim()) {
+    // Промокод будет проверен на сервере
+    discount.value = 0 // Сбрасываем локальную скидку, пусть сервер рассчитывает
   }
 
   if (Object.keys(errors.value).length > 0) {
@@ -679,17 +692,17 @@ const handleSubmit = async () => {
       recipient: form.value.recipient,
       address: form.value.address,
       comment: form.value.comment || null,
-      promoCode: form.value.promoCode || null,
+      promoCode: form.value.promoCode && form.value.promoCode.trim() ? form.value.promoCode.trim() : null,
       paymentMethod: form.value.paymentMethod,
       tip: showTipOptions.value ? calculateTip.value : 0,
-      discount: discount.value,
+      discount: 0, // Не передаем discount, пусть сервер рассчитывает на основе промокода
       finalTotal: finalTotal.value
     }
 
     emit('submit', orderData)
   } catch (error) {
     console.error('Ошибка при оформлении заказа:', error)
-    alert('Ошибка при оформлении заказа. Попробуйте позже.')
+    // Ошибка будет обработана в Drawer.vue и передана через props.error
   } finally {
     isSubmitting.value = false
   }
@@ -698,6 +711,16 @@ const handleSubmit = async () => {
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     resetForm()
+    // Сбрасываем ошибку при открытии модального окна
+    errors.value = {}
+  }
+})
+
+watch(() => props.error, (newError) => {
+  if (newError && (newError.includes('промокод') || newError.includes('Промокод'))) {
+    // Очищаем promoMessage, чтобы не дублировать сообщение об ошибке
+    // Ошибка будет показана только в блоке сверху через props.error
+    promoMessage.value = ''
   }
 })
 

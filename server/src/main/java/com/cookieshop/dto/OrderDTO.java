@@ -20,6 +20,9 @@ public class OrderDTO {
     private String paymentMethod;
     private BigDecimal tip;
     private BigDecimal discount;
+    private String userEmail;
+    private String userUsername;
+    private String userFullName;
     
     public OrderDTO() {}
     
@@ -145,6 +148,30 @@ public class OrderDTO {
     
     public void setDiscount(BigDecimal discount) {
         this.discount = discount;
+    }
+    
+    public String getUserEmail() {
+        return userEmail;
+    }
+    
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+    
+    public String getUserUsername() {
+        return userUsername;
+    }
+    
+    public void setUserUsername(String userUsername) {
+        this.userUsername = userUsername;
+    }
+    
+    public String getUserFullName() {
+        return userFullName;
+    }
+    
+    public void setUserFullName(String userFullName) {
+        this.userFullName = userFullName;
     }
 }
 

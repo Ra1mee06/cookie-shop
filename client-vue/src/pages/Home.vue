@@ -296,7 +296,7 @@ watch(filters, fetchItems, { deep: true })
     </div>
 
     <!-- Filters Section -->
-    <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div id="products-section" class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
       <div class="flex items-center gap-4">
         <div class="hidden md:block w-16 h-1 bg-gradient-to-r from-cookie-500 to-brown-600 rounded-full"></div>
         <h2 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cookie-600 to-brown-700 bg-clip-text text-transparent">
@@ -342,7 +342,7 @@ watch(filters, fetchItems, { deep: true })
     />
   </div>
 
-  <div class="relative z-10 w-full flex justify-center mt-12 mb-8"> 
+  <div v-if="!showModal" class="relative z-10 w-full flex justify-center mt-12 mb-8"> 
     <button 
       @click="openForm"
       class="btn-primary text-lg px-8 py-4"

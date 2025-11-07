@@ -48,7 +48,14 @@ public class OrderController {
         } catch (RuntimeException e) {
             e.printStackTrace();
             Map<String, String> response = new HashMap<>();
-            response.put("error", e.getMessage());
+            String errorMessage = e.getMessage();
+            response.put("error", errorMessage);
+            // Если ошибка связана с промокодом, возвращаем статус 400 (Bad Request)
+            // В противном случае возвращаем 500 (Internal Server Error)
+            if (errorMessage != null && (errorMessage.contains("промокод") || errorMessage.contains("Промокод") || 
+                errorMessage.contains("promo") || errorMessage.contains("Promo"))) {
+                return ResponseEntity.status(400).body(response);
+            }
             return ResponseEntity.status(500).body(response);
         } catch (Exception e) {
             e.printStackTrace();

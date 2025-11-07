@@ -72,16 +72,35 @@ mysql -u root -p
 ```
 
 2. Выполните скрипт создания базы данных:
-```bash
-mysql -u root -p < database/schema.sql
-```
 
-Или вручную в MySQL консоли:
-```sql
-CREATE DATABASE IF NOT EXISTS cookie_shop;
-USE cookie_shop;
-SOURCE database/schema.sql;
-```
+   **Для PowerShell (Windows):**
+   ```powershell
+   # Способ 1: Использование Get-Content с pipe
+   Get-Content database/schema.sql | mysql -u root -p
+   
+   # Способ 2: Использование cmd для bash-стиля редиректа
+   cmd /c "mysql -u root -p < database/schema.sql"
+   
+   # Способ 3: Вручную в MySQL консоли (рекомендуется)
+   mysql -u root -p
+   # Затем в MySQL консоли:
+   SOURCE D:/cookie-shop/database/schema.sql;
+   # Или используйте относительный путь от текущей директории MySQL
+   ```
+
+   **Для bash/Linux/Mac:**
+   ```bash
+   mysql -u root -p < database/schema.sql
+   ```
+
+   **Или вручную в MySQL консоли:**
+   ```sql
+   CREATE DATABASE IF NOT EXISTS cookie_shop;
+   USE cookie_shop;
+   SOURCE database/schema.sql;
+   ```
+   
+   **Примечание:** В PowerShell оператор `<` не работает для редиректа ввода. Используйте один из способов выше.
 
 3. Проверьте, что база создана:
 ```sql
@@ -113,7 +132,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-Сервер должен запуститься на `http://localhost:8080`
+Сервер должен запуститься на `http://localhost:8081`
 
 ### Шаг 4: Настройка фронтенда
 
@@ -130,7 +149,7 @@ npm install
 
 4. Настройте API endpoint (если нужно) в `src/composables/useApi.js`:
 ```javascript
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8081/api';
 ```
 
 5. Запустите dev сервер:
@@ -159,7 +178,7 @@ npm run dev
 - Убедитесь, что порт фронтенда разрешен
 
 #### Проблема: Фронтенд не подключается к API
-- Проверьте, что бэкенд запущен на порту 8080
+- Проверьте, что бэкенд запущен на порту 8081
 - Проверьте URL в `useApi.js`
 - Проверьте консоль браузера на ошибки
 

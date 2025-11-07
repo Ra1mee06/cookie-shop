@@ -201,10 +201,34 @@ onMounted(load)
             <svg class="h-4 w-4 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            Автор
+            Автор предложения
           </p>
           <p class="text-base font-bold text-brown-800">{{ suggestion.author }}</p>
-          <p v-if="suggestion.userId" class="text-xs text-brown-500 mt-1">ID пользователя: {{ suggestion.userId }}</p>
+          <div class="mt-3 pt-3 border-t border-beige-200">
+            <p class="text-xs font-semibold text-brown-600 uppercase mb-2 flex items-center gap-2">
+              <svg class="h-4 w-4 text-cookie-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Аккаунт отправителя
+            </p>
+            <div class="space-y-1">
+              <p v-if="suggestion.userFullName" class="text-sm font-semibold text-brown-800">
+                Имя: <span class="font-normal">{{ suggestion.userFullName }}</span>
+              </p>
+              <p v-if="suggestion.userEmail" class="text-sm font-semibold text-brown-800">
+                Email: <span class="font-normal">{{ suggestion.userEmail }}</span>
+              </p>
+              <p v-if="suggestion.userUsername" class="text-sm font-semibold text-brown-800">
+                Логин: <span class="font-normal">@{{ suggestion.userUsername }}</span>
+              </p>
+              <p v-if="suggestion.userId" class="text-sm font-semibold text-brown-800">
+                ID: <span class="font-normal">{{ suggestion.userId }}</span>
+              </p>
+              <p v-if="!suggestion.userId && !suggestion.userUsername && !suggestion.userEmail" class="text-xs text-brown-500 italic">
+                Информация о пользователе недоступна
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="bg-white rounded-xl p-4 border-2 border-beige-200">
