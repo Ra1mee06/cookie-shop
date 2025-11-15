@@ -29,14 +29,14 @@ public class OrderController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         
         try {
-            // Проверка авторизации - userId обязателен
+            // Проверка авторизации
             if (userId == null) {
                 Map<String, String> response = new HashMap<>();
                 response.put("error", "Авторизация необходима для создания заказа. Пожалуйста, войдите в систему.");
                 return ResponseEntity.status(401).body(response);
             }
             
-            // Проверяем, существует ли указанный пользователь
+            // Проверка пользователя
             if (!userRepository.findById(userId).isPresent()) {
                 Map<String, String> response = new HashMap<>();
                 response.put("error", "Пользователь с id " + userId + " не найден. Пожалуйста, войдите в систему снова.");
@@ -50,8 +50,6 @@ public class OrderController {
             Map<String, String> response = new HashMap<>();
             String errorMessage = e.getMessage();
             response.put("error", errorMessage);
-            // Если ошибка связана с промокодом, возвращаем статус 400 (Bad Request)
-            // В противном случае возвращаем 500 (Internal Server Error)
             if (errorMessage != null && (errorMessage.contains("промокод") || errorMessage.contains("Промокод") || 
                 errorMessage.contains("promo") || errorMessage.contains("Promo"))) {
                 return ResponseEntity.status(400).body(response);
@@ -69,7 +67,6 @@ public class OrderController {
     public ResponseEntity<List<OrderDTO>> getOrdersByUser(
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         
-        // Если userId не передан, возвращаем пустой список
         if (userId == null) {
             return ResponseEntity.ok(Collections.emptyList());
         }

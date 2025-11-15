@@ -203,31 +203,25 @@ public class AuthController {
         try {
             String finalAvatarUrl = avatarUrl;
             
-            // Если загружен файл, сохраняем его
+            // Сохранение аватара
             if (file != null && !file.isEmpty()) {
-                // Создаем директорию для аватаров, если её нет
                 String uploadDir = "uploads/avatars";
                 File dir = new File(uploadDir);
                 if (!dir.exists()) {
                     dir.mkdirs();
                 }
                 
-                // Генерируем уникальное имя файла
                 String originalFilename = file.getOriginalFilename();
                 String extension = originalFilename != null && originalFilename.contains(".") 
                     ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
                     : "";
                 String filename = UUID.randomUUID().toString() + extension;
                 
-                // Сохраняем файл
                 Path filePath = Paths.get(uploadDir, filename);
                 Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
                 
-                // Устанавливаем URL для доступа к файлу
                 finalAvatarUrl = "/uploads/avatars/" + filename;
             }
-            
-            // Если передан URL напрямую (например, для выбора печеньки)
             if (finalAvatarUrl != null && !finalAvatarUrl.trim().isEmpty()) {
                 Map<String, Object> result = authService.updateAvatar(userId, finalAvatarUrl);
                 

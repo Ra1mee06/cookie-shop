@@ -26,7 +26,6 @@ public class FavoriteController {
     
     @GetMapping
     public ResponseEntity<List<FavoriteDTO>> getAllFavorites(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        // Если userId не передан, возвращаем пустой список (для неавторизованных пользователей)
         if (userId == null) {
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -41,8 +40,6 @@ public class FavoriteController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         
         try {
-            // Если userId не передан, используем первого доступного пользователя для тестирования
-            // В будущем нужно получать из токена
             if (userId == null) {
                 List<User> users = userRepository.findAll();
                 if (users.isEmpty()) {
@@ -52,7 +49,7 @@ public class FavoriteController {
                 }
                 userId = users.get(0).getId(); // Используем первого доступного пользователя
             } else {
-                // Проверяем, существует ли указанный пользователь
+                // Проверка пользователя
                 if (!userRepository.findById(userId).isPresent()) {
                     List<User> users = userRepository.findAll();
                     if (users.isEmpty()) {
@@ -60,7 +57,6 @@ public class FavoriteController {
                         response.put("error", "User with id " + userId + " not found and no users available.");
                         return ResponseEntity.status(500).body(response);
                     }
-                    // Используем первого доступного пользователя
                     userId = users.get(0).getId();
                 }
             }
@@ -88,12 +84,12 @@ public class FavoriteController {
             FavoriteDTO favorite = favoriteService.addFavorite(userId, productId);
             return ResponseEntity.ok(favorite);
         } catch (RuntimeException e) {
-            e.printStackTrace(); // Логируем ошибку
+            e.printStackTrace();
             Map<String, String> response = new HashMap<>();
             response.put("error", e.getMessage());
             return ResponseEntity.status(500).body(response);
         } catch (Exception e) {
-            e.printStackTrace(); // Логируем ошибку
+            e.printStackTrace();
             Map<String, String> response = new HashMap<>();
             response.put("error", "Internal server error: " + e.getMessage());
             return ResponseEntity.status(500).body(response);

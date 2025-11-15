@@ -21,16 +21,14 @@ public class AuthService {
     public Map<String, Object> login(String loginOrEmail, String password) {
         Map<String, Object> response = new HashMap<>();
         
-        // Пытаемся найти пользователя по email или username
+        // Поиск пользователя
         Optional<User> userOptional = userRepository.findByEmail(loginOrEmail);
         if (!userOptional.isPresent()) {
-            // Если не нашли по email, пробуем по username
             userOptional = userRepository.findByUsername(loginOrEmail);
         }
         
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            // Простое сравнение паролей без шифрования
             if (password.equals(user.getPassword())) {
                 response.put("success", true);
                 response.put("user", user);
@@ -50,14 +48,13 @@ public class AuthService {
     public Map<String, Object> register(String username, String email, String password, String fullName, String adminInviteCode) {
         Map<String, Object> response = new HashMap<>();
         
-        // Проверяем, существует ли пользователь с таким email
+        // Проверка существования пользователя
         if (userRepository.findByEmail(email).isPresent()) {
             response.put("success", false);
             response.put("message", "Email уже используется. Пожалуйста, используйте другой email.");
             return response;
         }
         
-        // Логин теперь обязателен при регистрации
         if (username == null || username.trim().isEmpty()) {
             response.put("success", false);
             response.put("message", "Логин обязателен для регистрации");
@@ -66,14 +63,14 @@ public class AuthService {
         
         String trimmedUsername = username.trim();
         
-        // Валидация логина: от 3 до 20 символов, только буквы, цифры и подчеркивание
+        // Валидация логина
         if (!trimmedUsername.matches("^[a-zA-Z0-9_]{3,20}$")) {
             response.put("success", false);
             response.put("message", "Логин должен содержать от 3 до 20 символов (только буквы, цифры и подчеркивание)");
             return response;
         }
         
-        // Проверяем уникальность логина
+        // Проверка уникальности логина
         if (userRepository.findByUsername(trimmedUsername).isPresent()) {
             response.put("success", false);
             response.put("message", "Логин уже используется. Пожалуйста, выберите другой логин.");
@@ -82,26 +79,25 @@ public class AuthService {
         
         username = trimmedUsername;
         
-        // Создаем нового пользователя
+        // Добавление в БД
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setPassword(password); // Сохраняем пароль как есть
+        user.setPassword(password);
         user.setFullName(fullName);
-        // Default role
         user.setRole("USER");
         
-        // Save user first to get the ID
+        // Сохранение пользователя
         User savedUser = userRepository.save(user);
         
-        // If invite provided, consume and grant admin
+        // Обработка приглашения администратора
         if (adminInviteCode != null && !adminInviteCode.trim().isEmpty()) {
             try {
                 adminInviteService.consumeInviteOrThrow(adminInviteCode.trim(), savedUser.getId());
                 savedUser.setRole("ADMIN");
                 savedUser = userRepository.save(savedUser);
             } catch (IllegalArgumentException ex) {
-                // Если код администратора неверный, удаляем созданного пользователя и возвращаем ошибку
+                // Удаление пользователя при ошибке
                 userRepository.delete(savedUser);
                 response.put("success", false);
                 String errorMessage = ex.getMessage();
@@ -137,7 +133,7 @@ public class AuthService {
         
         User user = userOptional.get();
         
-        // Проверяем уникальность email, если он изменился
+        // Проверка уникальности email
         if (email != null && !email.equals(user.getEmail())) {
             if (userRepository.findByEmail(email).isPresent()) {
                 response.put("success", false);
@@ -147,7 +143,7 @@ public class AuthService {
             user.setEmail(email);
         }
         
-        // Проверяем уникальность username, если он изменился
+        // Проверка уникальности username
         if (username != null && !username.equals(user.getUsername())) {
             if (userRepository.findByUsername(username).isPresent()) {
                 response.put("success", false);
@@ -157,7 +153,7 @@ public class AuthService {
             user.setUsername(username);
         }
         
-        // Обновляем fullName
+        // Обновление профиля
         if (fullName != null && !fullName.trim().isEmpty()) {
             user.setFullName(fullName);
         }
@@ -183,14 +179,14 @@ public class AuthService {
         
         User user = userOptional.get();
         
-        // Проверяем старый пароль
+        // Проверка старого пароля
         if (!oldPassword.equals(user.getPassword())) {
             response.put("success", false);
             response.put("message", "Invalid old password");
             return response;
         }
         
-        // Устанавливаем новый пароль
+        // Изменение пароля
         user.setPassword(newPassword);
         userRepository.save(user);
         

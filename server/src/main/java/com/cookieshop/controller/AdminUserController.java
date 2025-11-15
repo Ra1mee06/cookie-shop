@@ -15,14 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Admin controller for user management:
- * - View all users
- * - View a specific user
- * - View user's orders and suggestions
- * - Edit user profile
- * - Delete user
- */
+// Изменение информации от админа
 @RestController
 @RequestMapping("/api/admin/users")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:5174"})
@@ -40,7 +33,7 @@ public class AdminUserController {
     @Autowired
     private AdminActionLogger adminLogger;
 
-    /** List all users (admin only) */
+    // Просмотр всех пользователей
     @GetMapping
     public ResponseEntity<?> list(HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);
@@ -49,7 +42,7 @@ public class AdminUserController {
         return ResponseEntity.ok(users);
     }
 
-    /** Get full info about a user */
+    // Получение информации о пользователе
     @GetMapping("/{id}")
     public ResponseEntity<?> detail(@PathVariable Long id, HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);
@@ -61,7 +54,7 @@ public class AdminUserController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Get all orders of a user */
+    // Получение заказов пользователя
     @GetMapping("/{id}/orders")
     public ResponseEntity<?> userOrders(@PathVariable Long id, HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);
@@ -70,7 +63,7 @@ public class AdminUserController {
         return ResponseEntity.ok(orders);
     }
 
-    /** Get all suggestions (reviews/feedbacks) of a user */
+    // Получение предложений пользователя
     @GetMapping("/{id}/suggestions")
     public ResponseEntity<?> userSuggestions(@PathVariable Long id, HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);
@@ -79,7 +72,7 @@ public class AdminUserController {
         return ResponseEntity.ok(suggestions);
     }
 
-    /** Update user profile fields */
+    // Изменение информации от админа
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> updates, HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);
@@ -103,7 +96,7 @@ public class AdminUserController {
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Delete a user */
+    // Удаление пользователя
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id, HttpServletRequest request) {
         User admin = adminLogger.verifyAdmin(request);

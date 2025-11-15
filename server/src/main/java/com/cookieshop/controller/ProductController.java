@@ -1,4 +1,3 @@
-// ProductController.java
 package com.cookieshop.controller;
 
 import com.cookieshop.dto.ProductDTO;

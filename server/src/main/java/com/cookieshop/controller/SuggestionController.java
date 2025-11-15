@@ -45,7 +45,6 @@ public class SuggestionController {
     public ResponseEntity<List<SuggestionDTO>> getSuggestionsByUser(
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         
-        // Если userId не передан, возвращаем пустой список
         if (userId == null) {
             return ResponseEntity.ok(Collections.emptyList());
         }

@@ -43,7 +43,6 @@ export function useSuggestions() {
   const submitSuggestion = async () => {
     if (!isValid()) return;
     
-    // Проверка авторизации
     if (!isAuthenticated()) {
       showAuthModal.value = true;
       return;

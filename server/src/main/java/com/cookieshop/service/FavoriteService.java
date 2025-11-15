@@ -38,13 +38,13 @@ public class FavoriteService {
     @Transactional
     public FavoriteDTO addFavorite(Long userId, Long productId) {
         try {
-            // Проверяем, существует ли уже такой favorite
+            // Проверка существования
             Optional<Favorite> existing = favoriteRepository.findByUserIdAndProductId(userId, productId);
             if (existing.isPresent()) {
                 return convertToDTO(existing.get());
             }
             
-            // Проверяем существование пользователя
+            // Проверка пользователя
             Optional<User> userOpt = userRepository.findById(userId);
             if (!userOpt.isPresent()) {
                 List<User> allUsers = userRepository.findAll();
@@ -55,7 +55,7 @@ public class FavoriteService {
             }
             User user = userOpt.get();
             
-            // Проверяем существование продукта
+            // Проверка продукта
             Optional<Product> productOpt = productRepository.findById(productId);
             if (!productOpt.isPresent()) {
                 List<Product> allProducts = productRepository.findAll();
@@ -72,13 +72,13 @@ public class FavoriteService {
             
             Favorite saved = favoriteRepository.save(favorite);
             
-            // Перезагружаем favorite со всеми связями для гарантии загрузки EAGER связей
+            // Добавление в БД
             Favorite reloaded = favoriteRepository.findById(saved.getId())
                 .orElseThrow(() -> new RuntimeException("Failed to reload favorite after save"));
             
             return convertToDTO(reloaded);
         } catch (RuntimeException e) {
-            throw e; // Пробрасываем RuntimeException как есть
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Error adding favorite: " + e.getMessage(), e);
         }

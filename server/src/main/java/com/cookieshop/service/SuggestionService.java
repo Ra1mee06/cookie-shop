@@ -26,7 +26,7 @@ public class SuggestionService {
     public SuggestionDTO createSuggestion(SuggestionDTO suggestionDTO, Long userId) {
         Suggestion suggestion = new Suggestion();
         
-        // Устанавливаем пользователя
+        // Установка пользователя
         if (userId != null) {
             Optional<User> userOpt = userRepository.findById(userId);
             if (userOpt.isPresent()) {
@@ -43,15 +43,17 @@ public class SuggestionService {
         return convertToDTO(saved);
     }
     
+    @Transactional(readOnly = true)
     public List<SuggestionDTO> getSuggestionsByUserId(Long userId) {
-        List<Suggestion> suggestions = suggestionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<Suggestion> suggestions = suggestionRepository.findByUserIdWithUser(userId);
         return suggestions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
     
+    @Transactional(readOnly = true)
     public List<SuggestionDTO> getAllSuggestions() {
-        List<Suggestion> suggestions = suggestionRepository.findAll();
+        List<Suggestion> suggestions = suggestionRepository.findAllWithUser();
         return suggestions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

@@ -40,7 +40,7 @@ public class OrderService {
     @Transactional
     public OrderDTO createOrder(Map<String, Object> orderData, Long userId) {
         try {
-            // Получаем или создаем пользователя
+            // Получение пользователя
             User user = null;
             if (userId != null) {
                 Optional<User> userOpt = userRepository.findById(userId);
@@ -49,7 +49,6 @@ public class OrderService {
                 }
             }
             
-            // Если userId не найден, используем первого доступного пользователя (для тестирования)
             if (user == null) {
                 List<User> users = userRepository.findAll();
                 if (!users.isEmpty()) {
@@ -57,11 +56,10 @@ public class OrderService {
                 }
             }
             
-            // Создаем заказ
+            // Создание заказа
             Order order = new Order();
             order.setUser(user);
             
-            // Получаем totalPrice (исходная сумма товаров без скидок и чаевых)
             Object totalPriceObj = orderData.get("totalPrice");
             BigDecimal originalTotalPrice;
             if (totalPriceObj instanceof Number) {
@@ -69,7 +67,7 @@ public class OrderService {
             } else {
                 originalTotalPrice = new BigDecimal(totalPriceObj.toString());
             }
-            // Обрабатываем промокод и применяем скидку
+            // Обработка промокода
             BigDecimal discount = BigDecimal.ZERO;
             String promoCode = null;
             PromoCode promoEntityForOrder = null;
@@ -78,7 +76,7 @@ public class OrderService {
                 if (promoCode.isEmpty()) {
                     promoCode = null;
                 } else {
-                    // Проверяем валидность промокода
+                    // Проверка промокода
                     PromoCode promo = promoCodeRepository.findByCodeIgnoreCase(promoCode).orElse(null);
                     if (promo == null) {
                         throw new RuntimeException("Промокод не найден или неверный. Пожалуйста, проверьте введенный промокод.");
@@ -95,7 +93,6 @@ public class OrderService {
                         throw new RuntimeException("Промокод больше не может быть использован. Пожалуйста, проверьте введенный промокод.");
                     }
                     
-                    // If discount is not provided explicitly, derive from promo definition
                     if (!orderData.containsKey("discount")) {
                         promoEntityForOrder = promo;
                         switch (promo.getType()) {
@@ -113,16 +110,13 @@ public class OrderService {
                                 }
                                 break;
                             case PRODUCT_PERCENT:
-                                // handled during items processing; leave discount 0 here
                                 promoEntityForOrder = promo;
                                 break;
                             case BUY2GET1:
-                                // handled during items processing by applyBuy2Get1 flag
                                 promoEntityForOrder = promo;
                                 break;
                         }
                     } else {
-                        // Если discount предоставлен, все равно проверяем, что промокод валиден
                         promoEntityForOrder = promo;
                         Object discountObj = orderData.get("discount");
                         if (discountObj instanceof Number) {
@@ -134,13 +128,10 @@ public class OrderService {
                 }
             }
             
-            // Обрабатываем промокод "2 по цене 1"
+            // Обработка промокода "2 по цене 1"
             if (promoCode != null && promoCode.equals("BUY2GET1")) {
-                // Логика обработки "2 по цене 1" должна применяться к позициям заказа
-                // Это обрабатывается при создании order items ниже
             }
             
-            // Используем finalTotal если указан, иначе рассчитываем от totalPrice с учетом discount
             BigDecimal finalTotal;
             if (orderData.containsKey("finalTotal")) {
                 Object finalTotalObj = orderData.get("finalTotal");
@@ -158,7 +149,6 @@ public class OrderService {
             order.setPromoCode(promoCode);
             order.setStatus(Order.OrderStatus.PENDING);
             
-            // Устанавливаем дополнительные поля заказа
             if (orderData.containsKey("recipient")) {
                 order.setRecipient(orderData.get("recipient").toString());
             }
@@ -188,10 +178,10 @@ public class OrderService {
                 }
             }
             
-            // Сохраняем заказ сначала, чтобы получить ID
+            // Добавление в БД
             order = orderRepository.save(order);
             
-            // Обрабатываем items
+            // Обработка товаров
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) orderData.get("items");
             if (itemsData != null) {
@@ -205,7 +195,6 @@ public class OrderService {
                     OrderItem orderItem = new OrderItem();
                     orderItem.setOrder(order);
                     
-                    // Получаем productId
                     Object productIdObj = itemData.get("productId");
                     Long productId;
                     if (productIdObj instanceof Number) {
@@ -221,7 +210,6 @@ public class OrderService {
                     Product product = productOpt.get();
                     orderItem.setProduct(product);
                     
-                    // Получаем quantity
                     Object quantityObj = itemData.get("quantity");
                     Integer quantity;
                     if (quantityObj instanceof Number) {
@@ -230,20 +218,15 @@ public class OrderService {
                         quantity = Integer.parseInt(quantityObj.toString());
                     }
                     
-                    // Применяем промокод "2 по цене 1"
+                    // Применение промокода "2 по цене 1"
                     if (applyBuy2Get1 && quantity >= 2) {
-                        // Если quantity >= 2, то каждый второй товар бесплатный
-                        // Например, 3 товара = 2 платных, 1 бесплатный
-                        // 4 товара = 2 платных, 2 бесплатных
-                        int paidQuantity = (quantity + 1) / 2; // Округляем вверх
+                        int paidQuantity = (quantity + 1) / 2;
                         orderItem.setQuantity(quantity);
-                        // Цена устанавливается как для половины количества
                         BigDecimal itemPrice = product.getPrice().multiply(BigDecimal.valueOf(paidQuantity));
                         orderItem.setPrice(itemPrice);
                     } else {
                         orderItem.setQuantity(quantity);
                         
-                        // Получаем price
                         Object priceObj = itemData.get("price");
                         BigDecimal price;
                         if (priceObj instanceof Number) {
@@ -251,7 +234,6 @@ public class OrderService {
                         } else {
                             price = new BigDecimal(priceObj.toString());
                         }
-                        // PRODUCT_PERCENT discount per item
                         if (promoEntity != null && promoEntity.getType() == PromoCode.PromoType.PRODUCT_PERCENT
                                 && promoEntity.getProduct() != null && promoEntity.getValue() != null
                                 && product.getId().equals(promoEntity.getProduct().getId())) {
@@ -265,16 +247,14 @@ public class OrderService {
                     order.getItems().add(orderItem);
                 }
                 
-                // Если применен промокод "2 по цене 1", пересчитываем общую сумму
+                // Пересчет суммы при промокоде "2 по цене 1"
                 if (applyBuy2Get1) {
                     BigDecimal recalculatedTotal = BigDecimal.ZERO;
                     for (OrderItem item : order.getItems()) {
                         recalculatedTotal = recalculatedTotal.add(item.getPrice());
                     }
-                    // Добавляем чаевые к пересчитанной сумме товаров
                     BigDecimal totalWithTip = recalculatedTotal.add(order.getTip());
                     order.setTotalPrice(totalWithTip);
-                    // Скидка = исходная сумма товаров - пересчитанная сумма товаров (без чаевых)
                     discount = originalTotalPrice.subtract(recalculatedTotal);
                     if (discount.compareTo(BigDecimal.ZERO) < 0) {
                         discount = BigDecimal.ZERO;
@@ -283,7 +263,7 @@ public class OrderService {
                 }
             }
             
-            // Сохраняем заказ со всеми items
+            // Сохранение заказа
             order = orderRepository.save(order);
             if (promoEntityForOrder != null) {
                 Integer usedCount = promoEntityForOrder.getUsedCount();
@@ -292,7 +272,6 @@ public class OrderService {
                 promoCodeRepository.save(promoEntityForOrder);
             }
             
-            // Перезагружаем для гарантии загрузки всех связей
             Order reloaded = orderRepository.findById(order.getId())
                 .orElseThrow(() -> new RuntimeException("Failed to reload order after save"));
             
@@ -400,7 +379,6 @@ public class OrderService {
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
         
-        // Устанавливаем дополнительные поля
         dto.setRecipient(order.getRecipient());
         dto.setAddress(order.getAddress());
         dto.setComment(order.getComment());
@@ -411,7 +389,6 @@ public class OrderService {
         dto.setTip(order.getTip());
         dto.setDiscount(order.getDiscount());
         
-        // Конвертируем items
         List<OrderItemDTO> itemDTOs = order.getItems().stream()
                 .map(this::convertItemToDTO)
                 .collect(Collectors.toList());
