@@ -39,6 +39,7 @@ target/
 *.zip
 *.tar.gz
 *.rar
+*.lst
 .mvn/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
