@@ -35,8 +35,10 @@ const {
   isLoading, 
   isSubmitted, 
   showAuthModal,
+  submitError,
   suggestionId,
   suggestion, 
+  validationErrors,
   isValid, 
   submitSuggestion, 
   resetForm 
@@ -144,7 +146,7 @@ const fetchItems = async () => {
   try {
     const params = {};
     
-    // Преобразуем параметры сортировки для Java сервера
+    // Преобразуем параметры сортировки для backend API
     if (filters.sortBy === 'price') {
       params.sortBy = 'price';
       params.sortOrder = 'asc';
@@ -374,6 +376,9 @@ watch(filters, fetchItems, { deep: true })
             </h3>
             
             <div class="space-y-5">
+              <div v-if="submitError" class="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                {{ submitError }}
+              </div>
               <div>
                 <label class="block text-sm font-semibold text-brown-700 mb-2">Ваше имя</label>
                 <input 
@@ -381,6 +386,7 @@ watch(filters, fetchItems, { deep: true })
                   class="input-field"
                   placeholder="Как к вам обращаться?"
                 >
+                <p v-if="validationErrors.author" class="text-xs text-red-600 mt-1">{{ validationErrors.author }}</p>
               </div>
               
               <div>
@@ -390,6 +396,7 @@ watch(filters, fetchItems, { deep: true })
                   class="input-field"
                   placeholder="Какой товар предлагаете?"
                 >
+                <p v-if="validationErrors.productName" class="text-xs text-red-600 mt-1">{{ validationErrors.productName }}</p>
               </div>
               
               <div>
@@ -399,6 +406,7 @@ watch(filters, fetchItems, { deep: true })
                   class="input-field h-32 resize-none"
                   placeholder="Опишите товар или ваше предложение"
                 ></textarea>
+                <p v-if="validationErrors.description" class="text-xs text-red-600 mt-1">{{ validationErrors.description }}</p>
               </div>
             </div>
 

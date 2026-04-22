@@ -1,0 +1,126 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cookie-shop-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cookie_shop
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cookie-shop-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: cookie-shop-backend:dev
+    container_name: cookie-shop-api-gateway
+    working_dir: /app/backend
+    command: npm run dev -w @cookie-shop/api-gateway
+    environment:
+      API_GATEWAY_PORT: 8081
+      CATALOG_SERVICE_URL: http://catalog-service:8082
+      ORDER_SERVICE_URL: http://order-service:8083
+      REDIS_URL: redis://redis:6379
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: cookie_shop
+      JWT_SECRET: dev-secret
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    ports:
+      - "18081:8081"
+    restart: unless-stopped
+
+  catalog-service:
+    image: cookie-shop-backend:dev
+    container_name: cookie-shop-catalog
+    working_dir: /app/backend
+    command: npm run dev -w @cookie-shop/catalog-service
+    environment:
+      CATALOG_SERVICE_PORT: 8082
+      REDIS_URL: redis://redis:6379
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: cookie_shop
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "18082:8082"
+    restart: unless-stopped
+
+  order-service:
+    image: cookie-shop-backend:dev
+    container_name: cookie-shop-orders
+    working_dir: /app/backend
+    command: npm run dev -w @cookie-shop/order-service
+    environment:
+      ORDER_SERVICE_PORT: 8083
+      EVENT_STREAM_KEY: domain_events
+      REDIS_URL: redis://redis:6379
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: cookie_shop
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "18083:8083"
+    restart: unless-stopped
+
+  notification-worker:
+    image: cookie-shop-backend:dev
+    container_name: cookie-shop-worker
+    working_dir: /app/backend
+    command: npm run dev -w @cookie-shop/notification-worker
+    environment:
+      EVENT_STREAM_KEY: domain_events
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      order-service:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

@@ -77,9 +77,42 @@ interface AdminUserUpdates {
 }
 
 const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:8081/api',
+  baseURL: 'http://localhost:18081/api',
   timeout: 10000
 })
+
+const toCamelCase = (key: string) =>
+  key.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase())
+
+const maybeFixMojibake = (value: string) => {
+  if (!value || (!value.includes('Ð') && !value.includes('Ñ'))) {
+    return value
+  }
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
+    const decoded = new TextDecoder('utf-8').decode(bytes)
+    return decoded.includes('�') ? value : decoded
+  } catch {
+    return value
+  }
+}
+
+const normalizeResponseData = (payload: unknown): unknown => {
+  if (typeof payload === 'string') {
+    return maybeFixMojibake(payload)
+  }
+  if (Array.isArray(payload)) {
+    return payload.map(normalizeResponseData)
+  }
+  if (payload && typeof payload === 'object') {
+    const normalized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+      normalized[toCamelCase(key)] = normalizeResponseData(value)
+    }
+    return normalized
+  }
+  return payload
+}
 
 api.interceptors.request.use((config: AxiosRequestConfig) => {
   const token = localStorage.getItem('authToken')
@@ -92,6 +125,11 @@ api.interceptors.request.use((config: AxiosRequestConfig) => {
   }
   
   return config
+})
+
+api.interceptors.response.use((response) => {
+  response.data = normalizeResponseData(response.data)
+  return response
 })
 
 export const useApi = () => {
@@ -108,18 +146,19 @@ export const useApi = () => {
     updateProfile: (profileData: ProfileData) => api.put('/auth/profile', profileData),
     updatePassword: (passwordData: PasswordData) => api.put('/auth/profile/password', passwordData),
     updateAvatar: (avatarUrl?: string, file?: File) => {
-      const formData = new FormData()
-      if (avatarUrl) {
-        formData.append('avatarUrl', avatarUrl)
-      }
       if (file) {
+        const formData = new FormData()
         formData.append('file', file)
-      }
-      return api.post('/auth/profile/avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+        if (avatarUrl) {
+          formData.append('avatarUrl', avatarUrl)
         }
-      })
+        return api.post('/auth/profile/avatar', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+      }
+      return api.post('/auth/profile/avatar', { avatarUrl: avatarUrl ?? null })
     }
   }
 

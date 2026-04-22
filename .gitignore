@@ -30,26 +30,6 @@ coverage/
 .npm
 .eslintcache
 
-# Java (Backend)
-target/
-*.class
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
-*.rar
-*.lst
-.mvn/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-# Spring Boot
-*.log
-application-local.properties
-application-dev.properties
-
 # MySQL
 *.sql.bak
 *.sql~

@@ -26,6 +26,14 @@ const isAuthenticated = ref(false);
 const showLoginForm = ref(true);
 const isLoading = ref(false);
 const errorMessage = ref('');
+const authErrors = ref({
+  loginOrEmail: '',
+  loginPassword: '',
+  registerName: '',
+  registerEmail: '',
+  registerUsername: '',
+  registerPassword: ''
+});
 
 const loginOrEmail = ref('');
 const loginPassword = ref('');
@@ -53,6 +61,14 @@ const isSaving = ref(false);
 const isSavingPassword = ref(false);
 const editError = ref('');
 const editSuccess = ref('');
+const editFieldErrors = ref({
+  email: '',
+  fullName: '',
+  username: '',
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
 
 const editForm = ref({
   email: '',
@@ -129,45 +145,48 @@ const closeEditForm = () => {
 const handleUpdateProfile = async () => {
   editError.value = '';
   editSuccess.value = '';
+  editFieldErrors.value.email = '';
+  editFieldErrors.value.fullName = '';
+  editFieldErrors.value.username = '';
   
   if (!editForm.value.email || !isValidEmail(editForm.value.email)) {
-    editError.value = 'Введите корректный email';
+    editFieldErrors.value.email = 'Введите корректный email';
     return;
   }
   
   if (!editForm.value.fullName || !editForm.value.fullName.trim()) {
-    editError.value = 'Введите имя';
+    editFieldErrors.value.fullName = 'Введите имя';
     return;
   }
   
   if (!editForm.value.username || !editForm.value.username.trim()) {
-    editError.value = 'Введите логин';
+    editFieldErrors.value.username = 'Введите логин';
     return;
   }
   
   isSaving.value = true;
   
   try {
-    const response = await authApi.updateProfile({
+    await authApi.updateProfile({
       email: editForm.value.email.toLowerCase().trim(),
       fullName: editForm.value.fullName.trim(),
       username: editForm.value.username.trim()
     });
-    
-    if (response.data.success) {
-      userData.value = {
-        ...userData.value,
-        ...response.data.user
-      };
-      localStorage.setItem('user', JSON.stringify(userData.value));
-      editSuccess.value = 'Профиль успешно обновлён!';
-      setTimeout(() => {
-        closeEditForm();
-      }, 1500);
-    } else {
-      editError.value = response.data.message || 'Ошибка обновления профиля';
-    }
+    const refreshed = await authApi.getProfile();
+    userData.value = {
+      ...userData.value,
+      ...refreshed.data
+    };
+    localStorage.setItem('user', JSON.stringify(userData.value));
+    editSuccess.value = 'Профиль успешно обновлён!';
+    setTimeout(() => {
+      closeEditForm();
+    }, 1500);
   } catch (error) {
+    const fieldErrors = error.response?.data?.errors || {};
+    editFieldErrors.value.email = fieldErrors.email?.[0] || '';
+    editFieldErrors.value.fullName = fieldErrors.fullName?.[0] || '';
+    editFieldErrors.value.username = fieldErrors.username?.[0] || '';
     editError.value = error.response?.data?.message || 'Ошибка обновления профиля';
     console.error('Update profile error:', error);
   } finally {
@@ -178,42 +197,40 @@ const handleUpdateProfile = async () => {
 const handleUpdatePassword = async () => {
   editError.value = '';
   editSuccess.value = '';
+  editFieldErrors.value.oldPassword = '';
+  editFieldErrors.value.newPassword = '';
+  editFieldErrors.value.confirmPassword = '';
   
   if (!editForm.value.oldPassword) {
-    editError.value = 'Введите текущий пароль';
+    editFieldErrors.value.oldPassword = 'Введите текущий пароль';
     return;
   }
   
   if (!editForm.value.newPassword || editForm.value.newPassword.length < 6) {
-    editError.value = 'Новый пароль должен содержать минимум 6 символов';
+    editFieldErrors.value.newPassword = 'Новый пароль должен содержать минимум 6 символов';
     return;
   }
   
   if (editForm.value.newPassword !== editForm.value.confirmPassword) {
-    editError.value = 'Пароли не совпадают';
+    editFieldErrors.value.confirmPassword = 'Пароли не совпадают';
     return;
   }
   
   isSavingPassword.value = true;
   
   try {
-    const response = await authApi.updatePassword({
+    await authApi.updatePassword({
       oldPassword: editForm.value.oldPassword,
       newPassword: editForm.value.newPassword,
       confirmPassword: editForm.value.confirmPassword
     });
-    
-    if (response.data.success) {
-      editSuccess.value = 'Пароль успешно изменён!';
-      editForm.value.oldPassword = '';
-      editForm.value.newPassword = '';
-      editForm.value.confirmPassword = '';
-      setTimeout(() => {
-        editSuccess.value = '';
-      }, 3000);
-    } else {
-      editError.value = response.data.message || 'Ошибка изменения пароля';
-    }
+    editSuccess.value = 'Пароль успешно изменён!';
+    editForm.value.oldPassword = '';
+    editForm.value.newPassword = '';
+    editForm.value.confirmPassword = '';
+    setTimeout(() => {
+      editSuccess.value = '';
+    }, 3000);
   } catch (error) {
     editError.value = error.response?.data?.message || 'Ошибка изменения пароля';
     console.error('Update password error:', error);
@@ -272,18 +289,14 @@ const handleAvatarUpload = async () => {
   isUploadingAvatar.value = true;
   
   try {
-    const response = await authApi.updateAvatar(selectedAvatar.value || null, avatarFile.value || null);
-    
-    if (response.data.success) {
-      userData.value = {
-        ...userData.value,
-        ...response.data.user
-      };
-      localStorage.setItem('user', JSON.stringify(userData.value));
-      closeAvatarModal();
-    } else {
-      alert(response.data.message || 'Ошибка загрузки аватара');
-    }
+    await authApi.updateAvatar(selectedAvatar.value || undefined, avatarFile.value || undefined);
+    const refreshed = await authApi.getProfile();
+    userData.value = {
+      ...userData.value,
+      ...refreshed.data
+    };
+    localStorage.setItem('user', JSON.stringify(userData.value));
+    closeAvatarModal();
   } catch (error) {
     alert(error.response?.data?.message || 'Ошибка загрузки аватара');
     console.error('Avatar upload error:', error);
@@ -304,7 +317,7 @@ const userInitials = computed(() => {
 const avatarUrl = computed(() => {
   if (userData.value.avatarUrl) {
     if (userData.value.avatarUrl.startsWith('/uploads/')) {
-      return `http://localhost:8081${userData.value.avatarUrl}`;
+      return `http://localhost:18081${userData.value.avatarUrl}`;
     }
     return userData.value.avatarUrl;
   }
@@ -394,31 +407,35 @@ const isValidEmail = (email) => {
 
 const handleRegister = async () => {
   errorMessage.value = '';
+  authErrors.value.registerName = '';
+  authErrors.value.registerEmail = '';
+  authErrors.value.registerUsername = '';
+  authErrors.value.registerPassword = '';
   
   if (!registerName.value.trim()) {
-    errorMessage.value = 'Введите имя';
+    authErrors.value.registerName = 'Введите имя';
     return;
   }
   
   if (!isValidEmail(registerEmail.value)) {
-    errorMessage.value = 'Введите корректный email';
+    authErrors.value.registerEmail = 'Введите корректный email';
     return;
   }
 
   if (!registerUsername.value.trim()) {
-    errorMessage.value = 'Введите логин';
+    authErrors.value.registerUsername = 'Введите логин';
     return;
   }
 
   // Валидация логина: только буквы, цифры и подчеркивания, минимум 3 символа
   const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
   if (!usernamePattern.test(registerUsername.value.trim())) {
-    errorMessage.value = 'Логин должен содержать от 3 до 20 символов (только буквы, цифры и подчеркивание)';
+    authErrors.value.registerUsername = 'Логин должен содержать от 3 до 20 символов (только буквы, цифры и подчеркивание)';
     return;
   }
 
   if (registerPassword.value.length < 6) {
-    errorMessage.value = 'Пароль должен содержать минимум 6 символов';
+    authErrors.value.registerPassword = 'Пароль должен содержать минимум 6 символов';
     return;
   }
 
@@ -468,13 +485,12 @@ const handleRegister = async () => {
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
     
   } catch (error) {
-    // Проверяем, есть ли конкретная ошибка от сервера
-    const serverMessage = error.response?.data?.message;
-    if (serverMessage) {
-      errorMessage.value = serverMessage;
-    } else {
-      errorMessage.value = 'Ошибка регистрации. Попробуйте позже.';
-    }
+    const fieldErrors = error.response?.data?.errors || {};
+    authErrors.value.registerName = fieldErrors.fullName?.[0] || '';
+    authErrors.value.registerEmail = fieldErrors.email?.[0] || '';
+    authErrors.value.registerUsername = fieldErrors.username?.[0] || '';
+    authErrors.value.registerPassword = fieldErrors.password?.[0] || '';
+    errorMessage.value = error.response?.data?.message || 'Ошибка регистрации. Попробуйте позже.';
     console.error('Registration error:', error);
   } finally {
     isLoading.value = false;
@@ -483,14 +499,16 @@ const handleRegister = async () => {
 
 const handleLogin = async () => {
   errorMessage.value = '';
+  authErrors.value.loginOrEmail = '';
+  authErrors.value.loginPassword = '';
   
   if (!loginOrEmail.value.trim()) {
-    errorMessage.value = 'Введите логин или email';
+    authErrors.value.loginOrEmail = 'Введите логин или email';
     return;
   }
 
   if (!loginPassword.value) {
-    errorMessage.value = 'Введите пароль';
+    authErrors.value.loginPassword = 'Введите пароль';
     return;
   }
 
@@ -534,6 +552,9 @@ const handleLogin = async () => {
     await Promise.all([loadUserOrders(), loadUserSuggestions()]);
     
   } catch (error) {
+    const fieldErrors = error.response?.data?.errors || {};
+    authErrors.value.loginOrEmail = fieldErrors.loginOrEmail?.[0] || fieldErrors.email?.[0] || '';
+    authErrors.value.loginPassword = fieldErrors.password?.[0] || '';
     errorMessage.value = error.response?.data?.message || 'Неверный логин/email или пароль';
     console.error('Login error:', error);
   } finally {
@@ -621,6 +642,7 @@ onMounted(checkAuth);
             placeholder="Введите логин или email"
             @keyup.enter="handleLogin"
           >
+          <p v-if="authErrors.loginOrEmail" class="text-xs text-red-600 mt-1">{{ authErrors.loginOrEmail }}</p>
         </div>
         
         <div>
@@ -632,6 +654,7 @@ onMounted(checkAuth);
             placeholder="Ваш пароль"
             @keyup.enter="handleLogin"
           >
+          <p v-if="authErrors.loginPassword" class="text-xs text-red-600 mt-1">{{ authErrors.loginPassword }}</p>
         </div>
         
         <button
@@ -666,6 +689,7 @@ onMounted(checkAuth);
             placeholder="Ваше имя"
             @keyup.enter="handleRegister"
           >
+          <p v-if="authErrors.registerName" class="text-xs text-red-600 mt-1">{{ authErrors.registerName }}</p>
         </div>
         
         <div>
@@ -677,6 +701,7 @@ onMounted(checkAuth);
             placeholder="Ваш email"
             @keyup.enter="handleRegister"
           >
+          <p v-if="authErrors.registerEmail" class="text-xs text-red-600 mt-1">{{ authErrors.registerEmail }}</p>
         </div>
         
         <div>
@@ -691,6 +716,7 @@ onMounted(checkAuth);
             placeholder="Придумайте логин"
             @keyup.enter="handleRegister"
           >
+          <p v-if="authErrors.registerUsername" class="text-xs text-red-600 mt-1">{{ authErrors.registerUsername }}</p>
         </div>
         
         <div>
@@ -702,6 +728,7 @@ onMounted(checkAuth);
             placeholder="Придумайте пароль"
             @keyup.enter="handleRegister"
           >
+          <p v-if="authErrors.registerPassword" class="text-xs text-red-600 mt-1">{{ authErrors.registerPassword }}</p>
         </div>
         
         <div>
@@ -1067,6 +1094,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Ваше имя"
                 >
+                <p v-if="editFieldErrors.fullName" class="text-xs text-red-600 mt-1">{{ editFieldErrors.fullName }}</p>
               </div>
               
               <div>
@@ -1077,6 +1105,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Ваш email"
                 >
+                <p v-if="editFieldErrors.email" class="text-xs text-red-600 mt-1">{{ editFieldErrors.email }}</p>
               </div>
               
               <div>
@@ -1087,6 +1116,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Ваш логин"
                 >
+                <p v-if="editFieldErrors.username" class="text-xs text-red-600 mt-1">{{ editFieldErrors.username }}</p>
               </div>
               
               <button
@@ -1112,6 +1142,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Введите текущий пароль"
                 >
+                <p v-if="editFieldErrors.oldPassword" class="text-xs text-red-600 mt-1">{{ editFieldErrors.oldPassword }}</p>
               </div>
               
               <div>
@@ -1122,6 +1153,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Придумайте новый пароль"
                 >
+                <p v-if="editFieldErrors.newPassword" class="text-xs text-red-600 mt-1">{{ editFieldErrors.newPassword }}</p>
               </div>
               
               <div>
@@ -1132,6 +1164,7 @@ onMounted(checkAuth);
                   class="input-field"
                   placeholder="Подтвердите новый пароль"
                 >
+                <p v-if="editFieldErrors.confirmPassword" class="text-xs text-red-600 mt-1">{{ editFieldErrors.confirmPassword }}</p>
               </div>
               
               <button

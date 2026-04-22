@@ -9,15 +9,28 @@ const hours = ref(24)
 const creating = ref(false)
 const list = ref([])
 const loading = ref(false)
+const createError = ref('')
+const createSuccess = ref('')
+const fieldErrors = ref({
+  hours: ''
+})
 
 const createInvite = async () => {
   creating.value = true
   code.value = ''
+  createError.value = ''
+  createSuccess.value = ''
+  fieldErrors.value.hours = ''
+  if (!hours.value || Number(hours.value) < 1) {
+    fieldErrors.value.hours = 'Срок действия должен быть не меньше 1 часа'
+    creating.value = false
+    return
+  }
   
   // Проверяем наличие userId
   const userId = localStorage.getItem('userId')
   if (!userId) {
-    alert('Ошибка: userId не найден в localStorage. Пожалуйста, войдите в систему заново.')
+    createError.value = 'Ошибка: userId не найден в localStorage. Пожалуйста, войдите в систему заново.'
     creating.value = false
     return
   }
@@ -41,7 +54,10 @@ const createInvite = async () => {
       code.value = data
     } else {
       console.error('Неожиданный формат ответа:', data)
-      alert('Код создан, но не удалось его получить из ответа сервера')
+      createError.value = 'Код создан, но не удалось получить его из ответа сервера'
+    }
+    if (code.value) {
+      createSuccess.value = 'Инвайт-код успешно создан'
     }
     
     // Перезагружаем список после создания
@@ -50,7 +66,7 @@ const createInvite = async () => {
     console.error('Ошибка создания инвайт-кода:', e)
     console.error('Error response:', e.response)
     const errorMsg = e.response?.data?.message || e.response?.data || e.message || 'Не удалось создать код'
-    alert(errorMsg)
+    createError.value = String(errorMsg)
   } finally {
     creating.value = false
   }
@@ -142,15 +158,18 @@ onMounted(load)
     </div>
     <AdminNav />
     <div class="bg-white rounded-2xl shadow-lg border-2 border-beige-200 p-6">
-    <div class="flex items-end gap-4 mb-6">
+    <div class="flex items-end gap-4 mb-2">
       <div>
         <label class="block text-sm font-semibold text-brown-700 mb-2">Срок действия (часы)</label>
         <input type="number" v-model.number="hours" min="1" class="input-field w-32" />
+        <div v-if="fieldErrors.hours" class="text-xs text-red-600 mt-1">{{ fieldErrors.hours }}</div>
       </div>
       <button :disabled="creating" class="btn-primary disabled:opacity-50" @click="createInvite">
         {{ creating ? 'Создание...' : 'Создать код' }}
       </button>
     </div>
+    <div v-if="createError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{{ createError }}</div>
+    <div v-if="createSuccess" class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">{{ createSuccess }}</div>
     <div v-if="code" class="p-6 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl mb-6">
       <div class="flex items-center justify-between">
         <div class="flex-1">

@@ -691,8 +691,8 @@ const handleSubmit = async () => {
     const orderData = {
       recipient: form.value.recipient,
       address: form.value.address,
-      comment: form.value.comment || null,
-      promoCode: form.value.promoCode && form.value.promoCode.trim() ? form.value.promoCode.trim() : null,
+      comment: form.value.comment?.trim() ? form.value.comment.trim() : undefined,
+      promoCode: form.value.promoCode?.trim() ? form.value.promoCode.trim() : undefined,
       paymentMethod: form.value.paymentMethod,
       tip: showTipOptions.value ? calculateTip.value : 0,
       discount: 0, // Не передаем discount, пусть сервер рассчитывает на основе промокода

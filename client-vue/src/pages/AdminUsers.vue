@@ -10,6 +10,13 @@ const error = ref('')
 const selected = ref(null)
 const orders = ref([])
 const suggestions = ref([])
+const saveError = ref('')
+const saveSuccess = ref('')
+const selectedFieldErrors = ref({
+  fullName: '',
+  username: '',
+  email: ''
+})
 
 // Filters & pagination
 const search = ref('')
@@ -117,10 +124,10 @@ const load = async () => {
   }
 }
 
-const emailError = ref('')
-const usernameError = ref('')
-
 const selectUser = async (u) => {
+  saveError.value = ''
+  saveSuccess.value = ''
+  selectedFieldErrors.value = { fullName: '', username: '', email: '' }
   selected.value = u
   const { data } = await admin.users.orders(u.id)
   orders.value = data
@@ -134,6 +141,49 @@ const setRole = async (u, role) => {
   if (!confirm(`Изменить роль пользователя #${u.id} на ${role}?`)) return
   await admin.users.update(u.id, { role })
   await load()
+}
+
+const saveSelectedUser = async () => {
+  if (!selected.value) return
+  saveError.value = ''
+  saveSuccess.value = ''
+  selectedFieldErrors.value = { fullName: '', username: '', email: '' }
+  const email = String(selected.value.email || '').trim()
+  const username = String(selected.value.username || '').trim()
+  const fullName = String(selected.value.fullName || '').trim()
+  if (!fullName) {
+    selectedFieldErrors.value.fullName = 'Имя обязательно'
+    return
+  }
+  if (!username) {
+    selectedFieldErrors.value.username = 'Username обязателен'
+    return
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    selectedFieldErrors.value.email = 'Некорректный email'
+    return
+  }
+  try {
+    await admin.users.update(selected.value.id, {
+      fullName,
+      username,
+      email,
+      avatarUrl: selected.value.avatarUrl || null,
+      role: selected.value.role
+    })
+    await load()
+    const refreshed = users.value.find((u) => u.id === selected.value.id)
+    if (refreshed) {
+      await selectUser(refreshed)
+    }
+    saveSuccess.value = 'Изменения сохранены'
+  } catch (e) {
+    const fieldErrors = e.response?.data?.errors || {}
+    selectedFieldErrors.value.fullName = fieldErrors.fullName?.[0] || ''
+    selectedFieldErrors.value.username = fieldErrors.username?.[0] || ''
+    selectedFieldErrors.value.email = fieldErrors.email?.[0] || ''
+    saveError.value = e.response?.data?.message || 'Не удалось сохранить изменения'
+  }
 }
 
 const removeUser = async (u) => {
@@ -321,16 +371,17 @@ onMounted(load)
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Имя</label>
           <input v-model="selected.fullName" class="input-field" />
+          <div v-if="selectedFieldErrors.fullName" class="text-xs text-red-600 mt-1">{{ selectedFieldErrors.fullName }}</div>
         </div>
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Username</label>
-          <input v-model="selected.username" @blur="usernameError = !selected.username?.trim() ? 'Username обязателен' : ''" class="input-field" />
-          <div v-if="usernameError" class="text-xs text-red-600 mt-1">{{ usernameError }}</div>
+          <input v-model="selected.username" @blur="selectedFieldErrors.username = !selected.username?.trim() ? 'Username обязателен' : ''" class="input-field" />
+          <div v-if="selectedFieldErrors.username" class="text-xs text-red-600 mt-1">{{ selectedFieldErrors.username }}</div>
         </div>
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Email</label>
-          <input v-model="selected.email" @blur="emailError = (/^\S+@\S+\.\S+$/.test(selected.email) ? '' : 'Некорректный email')" class="input-field" />
-          <div v-if="emailError" class="text-xs text-red-600 mt-1">{{ emailError }}</div>
+          <input v-model="selected.email" @blur="selectedFieldErrors.email = (/^\S+@\S+\.\S+$/.test(selected.email) ? '' : 'Некорректный email')" class="input-field" />
+          <div v-if="selectedFieldErrors.email" class="text-xs text-red-600 mt-1">{{ selectedFieldErrors.email }}</div>
         </div>
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Avatar URL</label>
@@ -344,12 +395,14 @@ onMounted(load)
           </select>
         </div>
         <div class="flex flex-wrap gap-3 items-end">
-          <button class="btn-primary" @click="admin.users.update(selected.id, { fullName: selected.fullName, username: selected.username, email: selected.email, avatarUrl: selected.avatarUrl, role: selected.role })">Сохранить</button>
+          <button class="btn-primary" @click="saveSelectedUser">Сохранить</button>
           <button class="btn-secondary" @click="() => selectUser(selected)">Отменить</button>
           <button :disabled="generating" class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 font-semibold" @click="generateAdminCode">
             {{ generating ? 'Генерация...' : 'Сделать админом по коду' }}
           </button>
         </div>
+        <div v-if="saveError" class="text-sm text-red-600 mt-2">{{ saveError }}</div>
+        <div v-if="saveSuccess" class="text-sm text-green-700 mt-2">{{ saveSuccess }}</div>
       </div>
       <div v-if="generatedCode" class="mt-4 p-4 border-2 border-emerald-200 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-between">
         <div class="flex-1">

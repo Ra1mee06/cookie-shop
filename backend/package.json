@@ -1,0 +1,40 @@
+{
+  "name": "cookie-shop-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev -w @cookie-shop/api-gateway",
+    "dev:catalog": "npm run dev -w @cookie-shop/catalog-service",
+    "dev:orders": "npm run dev -w @cookie-shop/order-service",
+    "dev:worker": "npm run dev -w @cookie-shop/notification-worker",
+    "dev:all": "node scripts/dev-all.mjs",
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspaces"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.23",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "mysql2": "^3.14.1",
+    "pino": "^9.7.0",
+    "pino-http": "^10.4.0",
+    "zod": "^3.25.23"
+  }
+}

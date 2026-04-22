@@ -7,6 +7,7 @@ const { admin } = useApi()
 const list = ref([])
 const loading = ref(false)
 const error = ref('')
+const createMessage = ref('')
 
 const form = ref({ code: '', type: 'ORDER_PERCENT', value: 10, maxUses: null, expiresAt: '', productId: null })
 const errors = ref({})
@@ -68,6 +69,7 @@ const load = async () => {
 
 const createCode = async () => {
   errors.value = {}
+  createMessage.value = ''
   
   // Проверяем наличие userId
   const userId = localStorage.getItem('userId')
@@ -86,8 +88,19 @@ const createCode = async () => {
   if (form.value.type !== 'BUY2GET1' && (form.value.value == null || form.value.value === '')) {
     errors.value.value = 'Значение обязательно'
   }
+  if (form.value.type !== 'BUY2GET1') {
+    const numericValue = Number(form.value.value)
+    if (Number.isNaN(numericValue) || numericValue <= 0) {
+      errors.value.value = 'Значение должно быть больше 0'
+    } else if ((form.value.type === 'ORDER_PERCENT' || form.value.type === 'PRODUCT_PERCENT') && numericValue > 100) {
+      errors.value.value = 'Процент скидки не может быть больше 100'
+    }
+  }
   if (form.value.type === 'PRODUCT_PERCENT' && !form.value.productId) {
     errors.value.productId = 'Требуется ID товара'
+  }
+  if (form.value.maxUses != null && form.value.maxUses !== '' && (Number.isNaN(Number(form.value.maxUses)) || Number(form.value.maxUses) <= 0)) {
+    errors.value.maxUses = 'Max uses должен быть больше 0'
   }
   
   if (Object.keys(errors.value).length) return
@@ -97,18 +110,17 @@ const createCode = async () => {
     
     const payload = {
       code: form.value.code.trim(),
-      type: form.value.type,
-      active: true
+      type: form.value.type
     }
     
     // Добавляем value только если тип не BUY2GET1
     if (form.value.type !== 'BUY2GET1' && form.value.value != null && form.value.value !== '') {
-      payload.value = form.value.value
+      payload.value = Number(form.value.value)
     }
     
     // Добавляем maxUses если указано
     if (form.value.maxUses != null && form.value.maxUses > 0) {
-      payload.maxUses = form.value.maxUses
+      payload.maxUses = Number(form.value.maxUses)
     }
     
     // Добавляем expiresAt если указано
@@ -137,12 +149,12 @@ const createCode = async () => {
     // Перезагружаем список
     await load()
     
-    alert('Промокод успешно создан!')
+    createMessage.value = 'Промокод успешно создан'
   } catch (e) {
     console.error('Ошибка создания промокода:', e)
     console.error('Error response:', e.response)
     const errorMsg = e.response?.data?.message || e.response?.data || e.message || 'Не удалось создать промокод'
-    alert(errorMsg)
+    errors.value.general = String(errorMsg)
   }
 }
 
@@ -179,6 +191,9 @@ onMounted(load)
     <div v-if="errors.general" class="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-xl">
       {{ errors.general }}
     </div>
+    <div v-if="createMessage" class="mb-6 p-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-xl">
+      {{ createMessage }}
+    </div>
 
     <div class="bg-white rounded-2xl shadow-lg border-2 border-beige-200 p-6 mb-8">
       <h2 class="text-xl font-bold mb-4 text-brown-800">Создать промокод</h2>
@@ -211,6 +226,7 @@ onMounted(load)
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Max uses</label>
           <input type="number" v-model.number="form.maxUses" class="input-field" />
+          <div v-if="errors.maxUses" class="text-xs text-red-600 mt-1">{{ errors.maxUses }}</div>
         </div>
         <div>
           <label class="block text-sm font-semibold text-brown-700 mb-2">Действует до</label>
